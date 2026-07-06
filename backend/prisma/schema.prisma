@@ -6,3 +6,101 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// §6 — exactly these values; API and DB share the canonical strings
+enum TicketType {
+  bug
+  feature
+  fix
+}
+
+enum TicketState {
+  new
+  ready_for_implementation
+  in_progress
+  ready_for_acceptance
+  done
+}
+
+model User {
+  id                         Int       @id @default(autoincrement())
+  email                      String    @unique // stored trimmed + lowercased (ADR-12, §3)
+  passwordHash               String    // Argon2id (§3); never returned by the API
+  emailVerifiedAt            DateTime? // null = unverified; gates login (ADR-3)
+  verificationToken          String?   @unique // raw 32-byte base64url (ADR-9)
+  verificationTokenExpiresAt DateTime? // issuance + 24h (§3)
+  createdAt                  DateTime  @default(now())
+
+  sessions Session[]
+  tickets  Ticket[]  @relation("TicketCreator")
+  comments Comment[]
+}
+
+model Session {
+  id        String   @id // opaque 32-byte crypto-random base64url (ADR-8); never in URLs (§9)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime // rolling 7-day, extended at most once/day; expired rows deleted lazily
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Team {
+  // INVISIBLE TO PRISMA (ADR-12): migration 0_init adds
+  //   CREATE UNIQUE INDEX team_name_ci ON "Team" (lower(name));
+  id         Int      @id @default(autoincrement())
+  name       String   // display case preserved; CI uniqueness via lower(name) index above
+  createdAt  DateTime @default(now())
+  modifiedAt DateTime @default(now()) // explicitly server-set — see DATA_MODEL.md "modifiedAt" note
+
+  epics   Epic[]
+  tickets Ticket[]
+}
+
+model Epic {
+  id          Int      @id @default(autoincrement())
+  teamId      Int      // immutable after create (§5) — enforced in the API layer
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  title       String   // non-empty after trim (§5); duplicates allowed (spec-analysis)
+  description String?
+  createdAt   DateTime @default(now())
+  modifiedAt  DateTime @default(now())
+
+  tickets Ticket[]
+
+  @@index([teamId])
+}
+
+model Ticket {
+  id          Int         @id @default(autoincrement())
+  teamId      Int
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  epicId      Int?        // nullable (§6); must belong to teamId — see invariant note
+  epic        Epic?       @relation(fields: [epicId], references: [id], onDelete: Restrict)
+  type        TicketType
+  state       TicketState @default(new)
+  title       String      // non-empty after trim (§6)
+  body        String      // non-empty; rendered as escaped plain text (spec-analysis)
+  createdById Int
+  createdBy   User        @relation("TicketCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime    @default(now())
+  modifiedAt  DateTime    @default(now()) // = createdAt at birth; bumped only on real change (§6)
+
+  comments Comment[]
+
+  @@index([teamId])
+  @@index([epicId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade) // §6: delete ticket → delete comments
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  body      String   // non-empty (§7); immutable — no modifiedAt by design (§7)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}

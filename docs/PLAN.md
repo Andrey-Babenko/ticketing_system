@@ -14,7 +14,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 0 — Foundation (est. 4h)
 
-- [ ] **S0.1 Prisma schema + first migration** *(est. 1.5h)*
+- [x] **S0.1 Prisma schema + first migration** *(est. 1.5h)*
   - **Goal:** All seven models (User, Session, Team, Epic, Ticket, Comment + enums) migrated into Postgres; `lower(name)` unique index on Team added by hand (ADR-12).
   - **Acceptance:** `prisma migrate dev` produces a migration that applies cleanly to a fresh DB; fresh DB contains zero application rows (§9); enums exactly `bug|feature|fix`, `new|ready_for_implementation|in_progress|ready_for_acceptance|done` (§6); FK rules: Team→Ticket/Epic **Restrict**, Epic→Ticket **Restrict** (nullable), Ticket→Comment **Cascade**, User→Session **Cascade** (§4, §5, §6).
   - **Tests first:** schema assertion test — insert/violate each FK rule via Prisma client against the test DB; expect Restrict/Cascade behavior (this is the §9 referential-integrity backbone).
