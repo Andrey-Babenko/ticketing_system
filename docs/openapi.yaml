@@ -1,0 +1,653 @@
+openapi: 3.0.3
+info:
+  title: Ticketing System API
+  version: 1.0.0
+  description: >
+    Contract of record (CLAUDE.md): both the React and Angular frontends conform to this
+    document; change it deliberately. Decisions cited as ADR-n live in docs/DECISIONS.md.
+    All timestamps are ISO-8601 UTC (spec §9). Auth is a session cookie `sid`
+    (HttpOnly, SameSite=Lax; ADR-8) — never in URLs (§9). Errors always use the Error
+    envelope. 401 = no/expired session on any protected endpoint; 400 = validation;
+    404 = missing path resource; 409 = uniqueness or referenced-delete conflict (§9).
+
+servers:
+  - url: http://localhost:8080/api
+    description: Via nginx (production compose, ADR-1)
+  - url: http://localhost:3000/api
+    description: Backend direct (debug)
+
+tags:
+  - name: auth
+  - name: teams
+  - name: epics
+  - name: tickets
+  - name: comments
+  - name: system
+
+security:
+  - cookieAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      summary: Health/readiness (public, §3)
+      security: []
+      responses:
+        '200':
+          description: DB reachable
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ok] }
+        '503':
+          description: DB unreachable
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [error] }
+
+  /auth/signup:
+    post:
+      tags: [auth]
+      summary: Create an account and send a verification email (§3)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '201':
+          description: Account created (unverified); verification email dispatched.
+            Returned even if the SMTP send failed — resend is the recovery path.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPublic' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: Email already registered (any casing/whitespace variant). code=EMAIL_TAKEN
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/verify:
+    post:
+      tags: [auth]
+      summary: Consume a verification token (§3, ADR-9)
+      description: Idempotent for verified accounts — a second call with the same token
+        returns already_verified (double-click / StrictMode safe).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+      responses:
+        '200':
+          description: Verified now, or was already verified
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [verified, already_verified] }
+        '400':
+          description: code=TOKEN_EXPIRED (known token past 24h) or TOKEN_INVALID (unknown).
+            Both variants offer resend-by-email in the UI (ADR-6).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/resend-verification:
+    post:
+      tags: [auth]
+      summary: Reissue a verification email (§3, ADR-6)
+      description: Always 200 with a generic message. Reissues only for existing,
+        unverified accounts; a new token invalidates earlier ones by overwrite (ADR-9).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Generic acknowledgement (no account enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Log in (§3, ADR-3, ADR-8)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Credentials' }
+      responses:
+        '200':
+          description: Session created; Set-Cookie sid (HttpOnly, SameSite=Lax, 7d rolling)
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPublic' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401':
+          description: Wrong email or password (generic; code=INVALID_CREDENTIALS)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '403':
+          description: Correct credentials but unverified — NO session created.
+            code=EMAIL_NOT_VERIFIED; the login screen shows the resend prompt on this code (ADR-3).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Destroy the session server-side and clear the cookie (ADR-8)
+      responses:
+        '204': { description: Logged out }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Current user for the header menu
+      responses:
+        '200':
+          description: The authenticated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPublic' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /teams:
+    get:
+      tags: [teams]
+      summary: List all teams with counts (wireframe 4)
+      description: Ordered by name, case-insensitive ascending.
+      responses:
+        '200':
+          description: All teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Team' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    post:
+      tags: [teams]
+      summary: Create a team (§4)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TeamWrite' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '409':
+          description: Name already used, case-insensitively (ADR-12). code=DUPLICATE_TEAM_NAME
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /teams/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idPath'
+    patch:
+      tags: [teams]
+      summary: Rename a team (§4)
+      description: Uniqueness check excludes the team itself — case-only renames succeed.
+        A no-op rename does not advance modifiedAt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TeamWrite' }
+      responses:
+        '200':
+          description: Renamed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Team' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: code=DUPLICATE_TEAM_NAME
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [teams]
+      summary: Delete a team (§4, §9)
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Team still contains tickets or epics (§9 mandated). code=TEAM_NOT_EMPTY
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /epics:
+    get:
+      tags: [epics]
+      summary: List epics for one team (§5, wireframe 5)
+      parameters:
+        - $ref: '#/components/parameters/teamIdQueryRequired'
+      responses:
+        '200':
+          description: Epics of the team, title case-insensitive ascending
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Epic' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    post:
+      tags: [epics]
+      summary: Create an epic bound to a team (§5 — team immutable afterwards)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EpicCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Epic' }
+        '400':
+          description: Empty title after trim, or teamId does not reference an existing team
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /epics/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idPath'
+    patch:
+      tags: [epics]
+      summary: Edit epic title/description (§5)
+      description: No teamId field exists — the team is immutable (§5). No-op saves do not
+        advance modifiedAt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EpicUpdate' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Epic' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [epics]
+      summary: Delete an epic (§5, §9)
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Tickets still reference this epic (§9 mandated). code=EPIC_REFERENCED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /tickets:
+    get:
+      tags: [tickets]
+      summary: List all tickets of one team (ADR-7 — filtering is client-side)
+      parameters:
+        - $ref: '#/components/parameters/teamIdQueryRequired'
+      responses:
+        '200':
+          description: Tickets ordered modifiedAt desc, id desc (board order, §8)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Ticket' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+    post:
+      tags: [tickets]
+      summary: Create a ticket (§6)
+      description: createdBy is taken from the session. state defaults to `new` but any of
+        the five values is accepted (§8 allows any transition). modifiedAt = createdAt.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TicketCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400':
+          description: Invalid enum, empty title/body after trim, dangling teamId/epicId,
+            or epic belonging to a different team (§6 — code=EPIC_TEAM_MISMATCH)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+
+  /tickets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/idPath'
+    get:
+      tags: [tickets]
+      summary: Full ticket for the detail view (§6, wireframe 3)
+      responses:
+        '200':
+          description: The ticket
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [tickets]
+      summary: Partial update — form saves and board drags share this (ADR-5)
+      description: >
+        Accepts any subset of editable fields; a drag sends {"state": "..."} only.
+        The server validates the MERGED result (incoming ∪ stored): a merged epic that
+        does not belong to the merged team → 400 EPIC_TEAM_MISMATCH (§6).
+        No-op saves (all merged values equal stored) must not advance modifiedAt (§6);
+        real changes set it server-side. Last write wins (§9).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TicketUpdate' }
+      responses:
+        '200':
+          description: Updated ticket (client reconciles board position from modifiedAt, ADR-10)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [tickets]
+      summary: Delete a ticket and cascade its comments (§6)
+      responses:
+        '204': { description: Deleted, comments included }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tickets/{id}/comments:
+    parameters:
+      - $ref: '#/components/parameters/idPath'
+    get:
+      tags: [comments]
+      summary: Comments of a ticket, oldest first (§7)
+      responses:
+        '200':
+          description: createdAt asc, id asc
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Comment' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [comments]
+      summary: Add an immutable comment (§7)
+      description: Author from session. MUST NOT touch the ticket's modifiedAt (§7).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, description: Non-empty after trim }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sid
+      description: Opaque session id backed by the Session table (ADR-8)
+
+  parameters:
+    idPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+    teamIdQueryRequired:
+      name: teamId
+      in: query
+      required: true
+      schema: { type: integer, minimum: 1 }
+      description: Missing/invalid → 400; a teamId that matches no team → 404
+
+  responses:
+    Unauthenticated:
+      description: No or expired session (code=UNAUTHENTICATED). The SPA redirects to /login.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ValidationError:
+      description: Request shape/enum/reference validation failed (code=VALIDATION,
+        or a specific code named on the operation; field set when attributable)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Path resource does not exist (code=NOT_FOUND)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Machine-readable; the full set used —
+                UNAUTHENTICATED, INVALID_CREDENTIALS, EMAIL_NOT_VERIFIED, EMAIL_TAKEN,
+                TOKEN_EXPIRED, TOKEN_INVALID, VALIDATION, NOT_FOUND,
+                DUPLICATE_TEAM_NAME, TEAM_NOT_EMPTY, EPIC_REFERENCED, EPIC_TEAM_MISMATCH
+            message: { type: string }
+            field:
+              type: string
+              description: Present when the error is attributable to one request field
+
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Trimmed + lowercased server-side before any comparison (ADR-12)
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          description: Never trimmed or normalized (spec-analysis); min 8 per §3
+
+    UserPublic:
+      type: object
+      required: [id, email]
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email, description: The stored lowercase form }
+
+    Team:
+      type: object
+      required: [id, name, createdAt, modifiedAt, ticketCount, epicCount]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        modifiedAt: { type: string, format: date-time }
+        ticketCount: { type: integer, description: Drives the disabled-delete affordance (wireframe 4) }
+        epicCount: { type: integer }
+
+    TeamWrite:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200, description: Trimmed before validation }
+
+    Epic:
+      type: object
+      required: [id, teamId, title, description, createdAt, modifiedAt, ticketCount]
+      properties:
+        id: { type: integer }
+        teamId: { type: integer }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        modifiedAt: { type: string, format: date-time }
+        ticketCount: { type: integer, description: Drives the disabled-delete affordance (wireframe 5) }
+
+    EpicCreate:
+      type: object
+      required: [teamId, title]
+      properties:
+        teamId: { type: integer, description: Immutable after creation (§5) }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true, maxLength: 50000 }
+
+    EpicUpdate:
+      type: object
+      description: teamId deliberately absent — epics cannot move teams (§5)
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true, maxLength: 50000 }
+
+    TicketType:
+      type: string
+      enum: [bug, feature, fix]
+      description: §6 canonical values; UI renders human labels
+
+    TicketState:
+      type: string
+      enum: [new, ready_for_implementation, in_progress, ready_for_acceptance, done]
+      description: §6 canonical values in workflow order; UI renders human labels
+
+    Ticket:
+      type: object
+      required: [id, teamId, epicId, type, state, title, body, createdAt, modifiedAt, createdBy]
+      properties:
+        id: { type: integer, description: Displayed as "#42" (ADR-4) }
+        teamId: { type: integer }
+        epicId:
+          type: integer
+          nullable: true
+          description: Clients resolve the epic title from the team's epic list (ADR-7)
+        type: { $ref: '#/components/schemas/TicketType' }
+        state: { $ref: '#/components/schemas/TicketState' }
+        title: { type: string }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+        modifiedAt:
+          type: string
+          format: date-time
+          description: Equals createdAt until the first real change (§6); board sort key (§8)
+        createdBy: { $ref: '#/components/schemas/UserPublic' }
+
+    TicketCreate:
+      type: object
+      required: [teamId, type, title, body]
+      properties:
+        teamId: { type: integer }
+        epicId: { type: integer, nullable: true, description: Must belong to teamId (§6) }
+        type: { $ref: '#/components/schemas/TicketType' }
+        state:
+          allOf: [{ $ref: '#/components/schemas/TicketState' }]
+          description: Optional; defaults to `new`
+        title: { type: string, minLength: 1, maxLength: 500 }
+        body: { type: string, minLength: 1, maxLength: 50000 }
+
+    TicketUpdate:
+      type: object
+      description: Any subset (ADR-5); a board drag sends only {state}. Merged-state
+        validation applies (§6).
+      properties:
+        teamId: { type: integer }
+        epicId: { type: integer, nullable: true }
+        type: { $ref: '#/components/schemas/TicketType' }
+        state: { $ref: '#/components/schemas/TicketState' }
+        title: { type: string, minLength: 1, maxLength: 500 }
+        body: { type: string, minLength: 1, maxLength: 50000 }
+
+    Comment:
+      type: object
+      required: [id, ticketId, author, body, createdAt]
+      properties:
+        id: { type: integer }
+        ticketId: { type: integer }
+        author: { $ref: '#/components/schemas/UserPublic' }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }

@@ -5,6 +5,8 @@
 - Task list: docs/PLAN.md — check off tasks as they complete; never silently reorder
 - API contract: docs/openapi.yaml — both frontends conform to it; change it deliberately
 - Architecture decisions: docs/DECISIONS.md — ADRs for anything not unambiguously specified
+- Topology/ports/env + auth flow diagram: docs/ARCHITECTURE.md
+- Prisma schema draft + integrity rules: docs/DATA_MODEL.md (authoritative copy: backend/prisma/schema.prisma once it lands)
 - Onboarding + manual test steps: README.md
 
 ## Stack
