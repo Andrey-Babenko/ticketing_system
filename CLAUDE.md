@@ -4,14 +4,21 @@
 - Requirements: docs/spec.md (cite section numbers when justifying decisions)
 - Task list: docs/PLAN.md — check off tasks as they complete; never silently reorder
 - API contract: docs/openapi.yaml — both frontends conform to it; change it deliberately
+- Onboarding + manual test steps: README.md
 
 ## Stack
 React+Vite SPA (frontend/), Express+Prisma+Zod API (backend/), PostgreSQL,
 cookie sessions, Argon2id, nodemailer→Mailpit. Angular twin in frontend-angular/ (stretch).
+Prisma is pinned to v6 (v7 is a breaking rearchitecture — install with `@6`).
+
+## Services & ports
+frontend nginx 8080 (serves SPA, proxies /api → backend:3000), backend 3000,
+postgres 5432 (app/app/ticketing), mailpit 8025 UI + 1025 SMTP, angular stub 8081 (profile "angular").
 
 ## Commands
-- Full stack:      docker compose up --build
-- Backend dev:     cd backend && npm run dev        (needs db+mailpit: docker compose up db mailpit)
+- Full stack:      docker compose up --build          (open http://localhost:8080)
+- Health check:    curl localhost:8080/api/health     (→ {"status":"ok"})
+- Backend dev:     cd backend && npm run dev           (needs db+mailpit: docker compose up -d db mailpit)
 - Backend tests:   cd backend && npm test
 - E2E:             npx playwright test
 - New migration:   cd backend && npx prisma migrate dev --name <name>
