@@ -141,3 +141,64 @@ Superseding a decision = new ADR + status update here, not silent editing.
 - **Consequences:** Drags feel instant; failure behavior is exactly §8's wording; the
   optimistic position can never disagree with post-refresh truth. One Playwright test with
   an intercepted 500 covers the §8 revert path end-to-end.
+
+## ADR-11: @dnd-kit without the sortable preset
+
+- **Status:** accepted · 2026-07-06
+- **Context:** The board is not a sortable list: a drop changes only column membership
+  (state), and in-column order is computed (`modified_at` desc, ADR-10). @hello-pangea/dnd
+  is built around index-based reordering — its drop animation settles the card at the drop
+  index, which our re-sort immediately contradicts (the double-jump rejected in ADR-10).
+- **Decision:** @dnd-kit with plain `useDraggable` (cards) / `useDroppable` (columns) and
+  `DragOverlay` — no sortable preset. The drop event is "card X onto column Y", which is
+  the PATCH payload. The real card never leaves its sorted position during a drag, so a
+  failed PATCH means the overlay disappears and nothing moved.
+- **Consequences:** Rollback needs no positional bookkeeping; pointer-event sensors work in
+  Firefox/Edge (§11). We own sensor/collision/overlay wiring (~60 lines) and a11y
+  affordances ourselves.
+
+## ADR-12: Case-insensitive uniqueness — normalize emails, functional index for team names
+
+- **Status:** accepted · 2026-07-06
+- **Context:** §3 (emails) and §4 (team names) require case-insensitive uniqueness. Emails
+  never need original casing (CLAUDE.md mandates trim+lowercase); team names must display
+  as typed. Prisma's schema cannot express `lower()` indexes.
+- **Decision:** Emails: trim + lowercase in the Zod layer on every email input (sign-up,
+  login, resend), plain `@unique` as the DB backstop. Team names: a hand-added line in a
+  migration — `CREATE UNIQUE INDEX team_name_ci ON "Team" (lower(name));` — noted in a
+  schema.prisma comment since Prisma can't render it. The API additionally pre-checks
+  (excluding self on rename) to return a friendly 409; the index is the race-safe backstop,
+  its violation mapped to the same 409. Rejected: shadow `nameLower` column (invariant
+  enforced by code in two forgettable places), `citext` (widens case-insensitivity to every
+  comparison and adds an extension for the same outcome).
+- **Consequences:** Both rules enforced structurally at the database; display casing
+  preserved for teams; one raw-SQL line living only in migration history.
+
+## ADR-13: Migrations on container start — healthcheck plus bounded retry
+
+- **Status:** accepted · 2026-07-06
+- **Context:** §9/§13 require schema creation to be automated inside `docker compose up
+  --build`. `depends_on: service_healthy` only orders first boot; it does not protect
+  `docker compose restart backend`, slow-laptop initdb windows, or crash-restarts.
+- **Decision:** Keep the `pg_isready` healthcheck + `service_healthy` dependency, AND run
+  `npx prisma migrate deploy` in the backend entrypoint behind a bounded retry
+  (30 attempts × 2s), starting the server only after success and exiting non-zero if
+  exhausted. Never `migrate dev` in a container (interactive; can reset data — a §9
+  catastrophe). The backend image keeps dev dependencies so the `prisma` CLI is present.
+- **Consequences:** Every startup path self-heals; migration failure is a loud container
+  exit rather than a half-up API. Prisma's advisory lock makes overlapping deploys safe.
+
+## ADR-14: Board data layer is TanStack Query v5
+
+- **Status:** accepted · 2026-07-06
+- **Context:** ADR-10 requires snapshot/rollback optimistic updates; §11 requires
+  loading/empty/error states; team switching must not race (a stale response overwriting
+  the newly selected team's board). Plain React state would hand-build caching, abort
+  plumbing, and rollback bookkeeping.
+- **Decision:** TanStack Query v5, used minimally: queries keyed by team
+  (`['tickets', teamId]`, likewise teams/epics), mutations using the documented
+  `onMutate` (snapshot + optimistic write) / `onError` (restore) / `onSettled` (invalidate)
+  recipe for drags; the ADR-10 404 case is one `invalidateQueries` call.
+- **Consequences:** Per-team caching and race safety for free; ADR-10 maps to the library's
+  canonical pattern instead of a hand-rolled variant. One well-known dependency; the
+  stretch Angular twin uses its own idioms regardless.
