@@ -85,3 +85,59 @@ Superseding a decision = new ADR + status update here, not silent editing.
 - **Consequences:** Instant filter UX, a minimal list-endpoint contract in openapi.yaml,
   trivial re-implementation in the stretch Angular twin. Revisit only if boards far exceed
   the 100-ticket bar (virtualization is already the sanctioned stretch, §14).
+
+## ADR-8: Postgres-backed cookie sessions, hand-rolled on Prisma
+
+- **Status:** accepted · 2026-07-06
+- **Context:** §9 allows cookie sessions or bearer tokens. ADR-1 gives a single origin
+  (JWT's cross-origin advantage is moot); ADR-3 requires sessions that can be refused and
+  revoked; §11 wants sessions to survive a backend restart; the stretch Angular twin should
+  not need its own token plumbing.
+- **Decision:** Opaque session id (32-byte crypto-random base64url) in an HttpOnly,
+  SameSite=Lax cookie, backed by a `Session` model in the Prisma schema (`id`, `userId`,
+  `expiresAt`, `createdAt`). Hand-rolled middleware (~40 lines): lookup → `req.user`;
+  rolling 7-day expiry extended at most once per day; logout deletes the row and clears
+  the cookie; expired rows are deleted lazily on lookup. No `express-session`/
+  `connect-pg-simple` — their table lives outside Prisma migrations, breaking §9's
+  single automated migration pipeline. JWT (stateless cookie or bearer) rejected: logout
+  would not truly revoke, and bearer tokens push storage/interceptor code into both
+  frontends for nothing.
+- **Consequences:** Real server-side logout; sessions survive restarts via the DB we
+  already run; zero auth code in either frontend beyond redirect-on-401; one DB read per
+  authenticated request (irrelevant at this scale).
+
+## ADR-9: Verification token lives in columns on User
+
+- **Status:** accepted · 2026-07-06
+- **Context:** §3 fixes 24h expiry, single-use, and reissue-invalidates-older. ADR-6 fixed
+  the resend UX. Remaining choice: dedicated token table vs columns on the user row.
+- **Decision:** `verificationToken` (unique, 32-byte crypto-random, stored raw),
+  `verificationTokenExpiresAt`, and `emailVerifiedAt` on `User`. Reissue overwrites the
+  columns, so at most one live token exists **by construction**. Verify endpoint resolves:
+  token not found → `invalid_or_expired`; found + already verified → `already_verified`
+  (success-flavored, so double-clicked links and React StrictMode double-fires are
+  harmless); found + expired → `expired` (screen offers the ADR-6 email-input resend);
+  found + valid → set `emailVerifiedAt`, keep the token. Single-use holds because re-use
+  is a no-op. Tokens are not hashed at rest: they only flip a verification flag and grant
+  no login.
+- **Consequences:** All three §3 invariants enforced structurally rather than by code; no
+  token table, no cleanup job, no used/invalidated flag logic. A token-history audit trail
+  is forfeited — and explicitly out of scope (§12).
+
+## ADR-10: Board drag-and-drop is optimistic with snapshot revert
+
+- **Status:** accepted · 2026-07-06
+- **Context:** §6 requires immediate persistence; §8 requires that a failed drag returns
+  the card and shows an error; §13 requires the board to match post-refresh server truth;
+  ADR-5 makes the drag a `PATCH {state}`.
+- **Decision:** On drop: snapshot board state, render the card immediately at the **top**
+  of the destination column (a successful PATCH bumps `modified_at`, so top-of-column is
+  exactly what a refresh would show), fire the PATCH. On 200: reconcile with the returned
+  ticket. On failure: restore the snapshot (card animates back) + toast. On 404
+  specifically: toast + refetch the team's tickets instead of reverting (never resurrect a
+  deleted card). A card with an in-flight PATCH is not draggable; the rest of the board
+  stays live. Same-column drops are pure no-ops (no API call, no `modified_at` change).
+  Library: dnd-kit (pointer-events based — native HTML5 DnD is unreliable in Firefox).
+- **Consequences:** Drags feel instant; failure behavior is exactly §8's wording; the
+  optimistic position can never disagree with post-refresh truth. One Playwright test with
+  an intercepted 500 covers the §8 revert path end-to-end.
