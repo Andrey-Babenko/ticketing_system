@@ -24,7 +24,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** `docker compose up --build` from clean checkout migrates then serves (§2, §13); unknown route → 404 envelope; invalid JSON → 400 envelope; `/api/health` still 200.
   - **Tests first:** supertest — envelope shape for 400/404; health returns ok.
   - **Files:** `backend/entrypoint.sh`, `backend/Dockerfile` (CMD), `backend/src/middleware/{errors,validate,auth}.ts`, `backend/src/lib/prisma.ts`, `backend/test/http.test.ts`.
-- [ ] **S0.3 Frontend shell** *(est. 1h)*
+- [x] **S0.3 Frontend shell** *(est. 1h)*
   - **Goal:** Router (routes: /login /signup /verify /board/:teamId? /teams /epics /tickets/:id /tickets/new), TanStack Query provider (ADR-14), API client honoring the envelope, layout with Board/Teams/Epics tabs + user menu placeholder, global 401→/login redirect.
   - **Acceptance:** All routes render placeholder screens; refresh on any deep route serves the SPA (nginx fallback, ADR-1); 401 from any query redirects to /login.
   - **Tests first:** none beyond a smoke render (E2E covers navigation later).
