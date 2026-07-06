@@ -16,9 +16,12 @@
   "private": "true",
   "dependencies": {
     "@prisma/client": "^6.19.3",
-    "express": "^5.2.1"
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.0",
     "@types/supertest": "^7.2.0",

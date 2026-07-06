@@ -515,7 +515,8 @@ components:
               description: Machine-readable; the full set used —
                 UNAUTHENTICATED, INVALID_CREDENTIALS, EMAIL_NOT_VERIFIED, EMAIL_TAKEN,
                 TOKEN_EXPIRED, TOKEN_INVALID, VALIDATION, NOT_FOUND,
-                DUPLICATE_TEAM_NAME, TEAM_NOT_EMPTY, EPIC_REFERENCED, EPIC_TEAM_MISMATCH
+                DUPLICATE_TEAM_NAME, TEAM_NOT_EMPTY, EPIC_REFERENCED, EPIC_TEAM_MISMATCH,
+                INTERNAL (unexpected server error — 500)
             message: { type: string }
             field:
               type: string

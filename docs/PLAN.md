@@ -19,7 +19,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** `prisma migrate dev` produces a migration that applies cleanly to a fresh DB; fresh DB contains zero application rows (§9); enums exactly `bug|feature|fix`, `new|ready_for_implementation|in_progress|ready_for_acceptance|done` (§6); FK rules: Team→Ticket/Epic **Restrict**, Epic→Ticket **Restrict** (nullable), Ticket→Comment **Cascade**, User→Session **Cascade** (§4, §5, §6).
   - **Tests first:** schema assertion test — insert/violate each FK rule via Prisma client against the test DB; expect Restrict/Cascade behavior (this is the §9 referential-integrity backbone).
   - **Files:** `backend/prisma/schema.prisma`, `backend/prisma/migrations/*`, `backend/test/schema.test.ts`, `docs/DATA_MODEL.md` (kept in sync).
-- [ ] **S0.2 Migrate-on-boot + error envelope + validation middleware** *(est. 1.5h)*
+- [x] **S0.2 Migrate-on-boot + error envelope + validation middleware** *(est. 1.5h)*
   - **Goal:** ADR-13 entrypoint (bounded-retry `migrate deploy`); one error envelope `{error:{code,message,field?}}`; Zod request validation wrapper; 401 auth middleware skeleton with public-route allowlist (§3 exemptions).
   - **Acceptance:** `docker compose up --build` from clean checkout migrates then serves (§2, §13); unknown route → 404 envelope; invalid JSON → 400 envelope; `/api/health` still 200.
   - **Tests first:** supertest — envelope shape for 400/404; health returns ok.
