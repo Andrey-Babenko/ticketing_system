@@ -61,15 +61,31 @@ docker compose down                 # stop & remove containers (keeps db volume)
 docker compose down -v              # also wipe the db volume (fully clean slate)
 ```
 
-### Backend dev on the host
-CLAUDE.md's fast inner loop — run the DB and Mailpit in Docker, backend with hot reload on the host:
+### Development mode (hot reload)
+The fast inner loop: run infrastructure in Docker, run the app(s) on the host with hot reload.
+The Vite dev server proxies `/api` to the backend on `:3000` (see `frontend/vite.config.ts`), so
+frontend code always calls `/api/...` — no environment-specific URLs, same as nginx in production.
+
 ```bash
-docker compose up -d db mailpit
-cd backend
-cp ../.env.example .env              # DATABASE_URL points at localhost:5432 (gitignored)
+# 1. Infrastructure (+ backend) in Docker
+docker compose up -d db mailpit backend      # backend on :3000
+
+# 2. Frontend with hot module reload on the host
+cd frontend
 npm install
-npm run dev                          # tsx watch, listens on :3000
+npm run dev                                  # → http://localhost:5173 (instant HMR)
 ```
+
+To hot-reload the **backend** too, run it on the host instead of in Docker:
+```bash
+docker compose up -d db mailpit              # infra only
+cd backend
+cp ../.env.example .env                       # DATABASE_URL → localhost:5432 (gitignored)
+npm install
+npm run dev                                  # tsx watch on :3000, restarts on save
+```
+Either way, open **http://localhost:5173** for the dev SPA. (Port 8080 is the production nginx
+build from `docker compose up --build`, which does *not* hot-reload.)
 
 ### Prisma (database schema)
 ```bash

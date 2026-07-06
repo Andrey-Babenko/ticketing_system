@@ -16,12 +16,17 @@ frontend nginx 8080 (serves SPA, proxies /api → backend:3000), backend 3000,
 postgres 5432 (app/app/ticketing), mailpit 8025 UI + 1025 SMTP, angular stub 8081 (profile "angular").
 
 ## Commands
-- Full stack:      docker compose up --build          (open http://localhost:8080)
-- Health check:    curl localhost:8080/api/health     (→ {"status":"ok"})
-- Backend dev:     cd backend && npm run dev           (needs db+mailpit: docker compose up -d db mailpit)
-- Backend tests:   cd backend && npm test
-- E2E:             npx playwright test
-- New migration:   cd backend && npx prisma migrate dev --name <name>
+- Full stack (prod): docker compose up --build        (open http://localhost:8080; no hot reload)
+- Health check:      curl localhost:8080/api/health   (→ {"status":"ok"})
+- Frontend dev:      cd frontend && npm run dev        (HMR on http://localhost:5173; proxies /api → :3000)
+- Backend dev:       cd backend && npm run dev         (tsx watch on :3000; needs db+mailpit)
+- Dev infra:         docker compose up -d db mailpit backend  (then run frontend/backend on host as needed)
+- Backend tests:     cd backend && npm test
+- E2E:               npx playwright test
+- New migration:     cd backend && npx prisma migrate dev --name <name>
+
+Dev mode (hot reload): run infra in Docker, apps on the host. Vite (:5173) proxies /api to the
+backend (:3000), matching nginx in prod. Port 8080 is the prod build only — no reload. See README.
 
 ## Iron rules
 - The backend validates EVERYTHING (enums, references, cross-team epic rule) — spec §6.
