@@ -4,6 +4,7 @@
 - Requirements: docs/spec.md (cite section numbers when justifying decisions)
 - Task list: docs/PLAN.md — check off tasks as they complete; never silently reorder
 - API contract: docs/openapi.yaml — both frontends conform to it; change it deliberately
+- Architecture decisions: docs/DECISIONS.md — ADRs for anything not unambiguously specified
 - Onboarding + manual test steps: README.md
 
 ## Stack
