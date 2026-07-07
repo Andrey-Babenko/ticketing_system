@@ -1,16 +1,12 @@
+@import "tailwindcss";
+
+/* Light-only for the hackathon: utilities set explicit colors, so `light dark`
+   would desync native form controls from our palette. */
 :root {
-  color-scheme: light dark;
-  font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
+/* Kept as plain CSS: #root lives in index.html. */
 #root {
   min-height: 100svh;
   display: flex;

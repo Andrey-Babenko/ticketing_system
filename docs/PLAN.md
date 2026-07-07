@@ -50,7 +50,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 2 — Auth UI (est. 3.5h)
 
-- [ ] **S2.1 Sign-up + login screens** *(est. 2h)*
+- [x] **S2.1 Sign-up + login screens** *(est. 2h)*
   - **Goal:** Wireframe-2 forms: signup (email, password, confirm-password client-side only, min-8 hint), login (+ resend prompt shown on 403 EMAIL_NOT_VERIFIED, ADR-3), post-signup "check your email" state.
   - **Acceptance:** §3, §10: field errors inline from envelope; verified login lands on /board; unverified shows resend which posts the typed email.
   - **Tests first:** (deferred to E2E in S7 — forms are thin over tested API).

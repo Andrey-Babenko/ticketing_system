@@ -8,3 +8,5 @@ npm-debug.log*
 .DS_Store
 coverage/
 .ai_work_dir/
+.agents/
+skills-lock.json
