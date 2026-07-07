@@ -62,7 +62,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 3 — Teams (est. 3.5h)
 
-- [ ] **S3.1 Teams API** *(est. 2h)*
+- [x] **S3.1 Teams API** *(est. 2h)*
   - **Goal:** CRUD per openapi.yaml: list (name-asc + `_count` tickets/epics, wireframe 4), create/rename (trimmed, CI-unique excluding self → 409, ADR-12), delete (409 while tickets/epics exist, §4/§9); no-op rename doesn't bump modified_at (§6 rule generalized).
   - **Acceptance:** §4: empty-after-trim name → 400; case-variant duplicate → 409; delete with children → 409 envelope; timestamps ISO-8601 UTC (§9).
   - **Tests first:** supertest — full matrix above incl. rename-to-own-name-different-case succeeds; unauthenticated → 401.
