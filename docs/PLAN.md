@@ -102,7 +102,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 6 — Kanban board (est. 6h) — **risk #2**
 
-- [ ] **S6.1 Board rendering + filters** *(est. 3h)*
+- [x] **S6.1 Board rendering + filters** *(est. 3h)*
   - **Goal:** Wireframe-1: 5 columns (workflow order, human labels, per-column counts), cards (type badge, title, epic name, relative modified time), team selector from URL (ADR/register: /board/:teamId, default first team), filter bar (search substring CI, type, epic incl. "No epic", Clear, filtered count) — all client-side AND-combined (ADR-7); zero-teams and zero-tickets empty states; + New ticket → /tickets/new; card click → detail.
   - **Acceptance:** §8: columns exactly five; ordering modified-desc, tie-break id desc; usable at 100 tickets (manual check with QA-created data); counts = visible set.
   - **Tests first:** unit — pure filter/sort functions (AND logic, CI substring, tie-break).
