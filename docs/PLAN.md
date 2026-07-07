@@ -86,7 +86,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 5 — Tickets & comments (est. 6h)
 
-- [ ] **S5.1 Tickets API** *(est. 3h)*
+- [x] **S5.1 Tickets API** *(est. 3h)*
   - **Goal:** `GET /api/tickets?teamId=` (ADR-7), `GET/POST/PATCH/DELETE /api/tickets/:id`. PATCH = ADR-5 merged-state validation: enums (§6), team exists, epic null-or-same-team-as-merged-team → 400; **no-op saves don't bump modified_at, real changes do** (§6); modified_at = created_at on create; delete cascades comments (§6); created_by from session.
   - **Acceptance:** §6 field table exactly; cross-team epic → 400 (never 409); drag payload `{state}` alone works; state accepted on create (any of five, default new).
   - **Tests first:** supertest — the full §6 matrix: each invalid enum, dangling team/epic, cross-team epic on create AND on team-change PATCH, no-op PATCH leaves modified_at identical, real PATCH bumps it, comment-add leaves it (with S5.3), delete removes comments.
