@@ -178,6 +178,14 @@ describe("teams — CRUD, uniqueness, counts, 409 rules (S3.1)", () => {
     expect(await prisma.team.count({ where: { id: team.id } })).toBe(1);
   });
 
+  it("returns 404, not 500, for ids beyond INT4 range (review finding)", async () => {
+    const res = await request(app)
+      .patch("/api/teams/2147483648")
+      .set("Cookie", cookie)
+      .send({ name: "X" });
+    expect(res.status).toBe(404);
+  });
+
   it("rejects an empty rename with 400", async () => {
     const team = (await createTeam("NonEmpty")).body;
     const res = await request(app)

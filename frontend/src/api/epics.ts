@@ -11,12 +11,14 @@ export interface Epic {
   ticketCount: number;
 }
 
+// Raw form strings — the backend trims and normalizes empty description to null
+// (one copy of the rule, review finding).
 export interface EpicWrite {
   title: string;
-  description: string | null;
+  description: string;
 }
 
-export const epicsKey = (teamId: number) => ["epics", teamId] as const;
+export const epicsKey = (teamId: number | null) => ["epics", teamId] as const;
 
 export const listEpics = (teamId: number) => api<Epic[]>(`/epics?teamId=${teamId}`);
 export const createEpic = (teamId: number, data: EpicWrite) =>
@@ -27,8 +29,8 @@ export const deleteEpic = (id: number) => api<undefined>(`/epics/${id}`, { metho
 
 export function useEpics(teamId: number | null) {
   return useQuery({
-    queryKey: teamId === null ? ["epics", "none"] : epicsKey(teamId),
-    queryFn: () => listEpics(teamId!),
+    queryKey: epicsKey(teamId),
+    queryFn: teamId === null ? undefined : () => listEpics(teamId),
     enabled: teamId !== null,
   });
 }

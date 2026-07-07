@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INT4_MAX } from "../lib/ids.js";
 
 // §5: title non-empty after trimming; 200/50000 are guardrails, not advertised limits.
 const title = z.string().trim().min(1, "Epic title is required").max(200);
@@ -15,7 +16,8 @@ const description = z
   .optional();
 
 export const epicCreateSchema = z.object({
-  teamId: z.number().int().positive(),
+  // INT4_MAX cap: beyond-range ids would make Prisma throw a non-Known error → 500.
+  teamId: z.number().int().positive().max(INT4_MAX),
   title,
   description,
 });

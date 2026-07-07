@@ -274,7 +274,7 @@ paths:
         - $ref: '#/components/parameters/teamIdQueryRequired'
       responses:
         '200':
-          description: Epics of the team, title case-insensitive ascending
+          description: Epics of the team, title case-insensitive ascending (id ascending tiebreak)
           content:
             application/json:
               schema:
@@ -282,6 +282,7 @@ paths:
                 items: { $ref: '#/components/schemas/Epic' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [epics]
       summary: Create an epic bound to a team (§5 — team immutable afterwards)
@@ -354,6 +355,7 @@ paths:
                 items: { $ref: '#/components/schemas/Ticket' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [tickets]
       summary: Create a ticket (§6)

@@ -41,6 +41,35 @@ export function Field({ label, hint, error, ...inputProps }: FieldProps) {
   );
 }
 
+interface TextAreaProps extends ComponentPropsWithRef<"textarea"> {
+  label: string;
+  hint?: string;
+  error?: string;
+}
+
+export function TextArea({ label, hint, error, ...textareaProps }: TextAreaProps) {
+  const id = useId();
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        aria-invalid={error ? true : undefined}
+        className={`w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 ${
+          error
+            ? "border-red-400 focus:ring-red-200"
+            : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
+        }`}
+        {...textareaProps}
+      />
+      {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 const BUTTON_VARIANTS = {
   primary: "bg-blue-600 text-white hover:bg-blue-700",
   danger: "bg-red-600 text-white hover:bg-red-700",

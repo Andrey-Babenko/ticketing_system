@@ -20,8 +20,7 @@ export default function Epics() {
 
   // The screen is team-scoped (§5, wireframe 5); the selection lives in the URL.
   const paramTeamId = Number(params.get("team"));
-  const selectedTeam =
-    teams?.find((t) => t.id === paramTeamId) ?? teams?.[0] ?? null;
+  const selectedTeam = teams?.find((t) => t.id === paramTeamId) ?? teams?.[0] ?? null;
   const teamId = selectedTeam?.id ?? null;
 
   const { data: epics, isPending: epicsPending, isError } = useEpics(teamId);
@@ -31,8 +30,10 @@ export default function Epics() {
   const [description, setDescription] = useState("");
   const [deleting, setDeleting] = useState<Epic | null>(null);
 
-  const invalidate = () =>
-    teamId !== null && queryClient.invalidateQueries({ queryKey: epicsKey(teamId) });
+  // Review finding: invalidate the MUTATED entity's team, not the currently-selected one —
+  // they can differ if the URL changed (browser Back) while a modal was open.
+  const invalidateTeam = (id: number) =>
+    queryClient.invalidateQueries({ queryKey: epicsKey(id) });
 
   const closeForm = () => {
     setFormState({ mode: "closed" });
@@ -42,40 +43,46 @@ export default function Epics() {
 
   const save = useMutation({
     mutationFn: () => {
-      const data = { title, description: description.trim() === "" ? null : description };
+      if (formState.mode === "closed") return Promise.reject(new Error("form closed"));
+      const data = { title, description };
       return formState.mode === "edit"
         ? updateEpic(formState.epicId, data)
-        : createEpic(teamId!, data);
+        : createEpic(formState.teamId, data); // teamId captured at open time, not live
     },
-    onSuccess: () => {
-      invalidate();
+    onSuccess: (epic) => {
+      invalidateTeam(epic.teamId);
       closeForm();
     },
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => deleteEpic(id),
-    onSuccess: () => {
-      invalidate();
+    mutationFn: (epic: Epic) => deleteEpic(epic.id),
+    onSuccess: (_data, epic) => {
+      invalidateTeam(epic.teamId);
       setDeleting(null);
     },
-    onError: () => {
+    onError: (_err, epic) => {
       // Stale count (a ticket got attached elsewhere): banner renders below + refetch.
       setDeleting(null);
-      invalidate();
+      invalidateTeam(epic.teamId);
     },
   });
 
   const openCreate = () => {
     if (!selectedTeam) return;
-    setFormState({ mode: "create", teamName: selectedTeam.name });
+    setFormState({ mode: "create", teamId: selectedTeam.id, teamName: selectedTeam.name });
     setTitle("");
     setDescription("");
     save.reset();
   };
 
   const openEdit = (epic: Epic) => {
-    setFormState({ mode: "edit", epicId: epic.id, originalTitle: epic.title });
+    setFormState({
+      mode: "edit",
+      epicId: epic.id,
+      teamId: epic.teamId,
+      originalTitle: epic.title,
+    });
     setTitle(epic.title);
     setDescription(epic.description ?? "");
     save.reset();
@@ -204,28 +211,26 @@ export default function Epics() {
         </>
       )}
 
-      <EpicFormModal
-        open={formState.mode !== "closed"}
-        mode={
-          formState.mode === "closed"
-            ? { mode: "create", teamName: selectedTeam?.name ?? "" }
-            : formState
-        }
-        title={title}
-        description={description}
-        onTitleChange={setTitle}
-        onDescriptionChange={setDescription}
-        onSubmit={() => save.mutate()}
-        onClose={closeForm}
-        error={saveError?.message}
-        pending={save.isPending}
-      />
+      {formState.mode !== "closed" && (
+        <EpicFormModal
+          open
+          mode={formState}
+          title={title}
+          description={description}
+          onTitleChange={setTitle}
+          onDescriptionChange={setDescription}
+          onSubmit={() => save.mutate()}
+          onClose={closeForm}
+          error={saveError}
+          pending={save.isPending}
+        />
+      )}
 
       <ConfirmDialog
         open={deleting !== null}
         title="Delete epic"
         pending={remove.isPending}
-        onConfirm={() => deleting && remove.mutate(deleting.id)}
+        onConfirm={() => deleting && remove.mutate(deleting)}
         onCancel={() => setDeleting(null)}
       >
         Delete epic <strong>{deleting?.title}</strong>? This cannot be undone.

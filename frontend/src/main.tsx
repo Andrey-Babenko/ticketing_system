@@ -9,6 +9,9 @@ import "./index.css";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      // Mutations invalidate explicitly, so a short staleTime only suppresses the
+      // refetch storm on team switching / window refocus (review finding).
+      staleTime: 30_000,
       retry: (failureCount, error) =>
         !(error instanceof ApiError && error.status >= 400 && error.status < 500) &&
         failureCount < 2,

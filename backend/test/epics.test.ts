@@ -202,6 +202,33 @@ describe("epics API (S4.1, §5)", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 404, not 500, for ids beyond INT4 range (review finding)", async () => {
+    // 2147483648 = INT4 max + 1 — passes the digit regex but can never exist in a SERIAL column.
+    expect(
+      (await request(app).patch("/api/epics/2147483648").set("Cookie", cookie).send({ title: "X" }))
+        .status
+    ).toBe(404);
+    expect((await request(app).delete("/api/epics/2147483648").set("Cookie", cookie)).status).toBe(404);
+    expect(
+      (await request(app).get("/api/epics?teamId=2147483648").set("Cookie", cookie)).status
+    ).toBe(404);
+  });
+
+  it("rejects a POST teamId beyond INT4 range with 400, not 500", async () => {
+    const res = await request(app)
+      .post("/api/epics")
+      .set("Cookie", cookie)
+      .send({ teamId: 2147483648, title: "Overflow" });
+    expect(res.status).toBe(400);
+  });
+
+  it("orders equal case-insensitive titles by id (stable tiebreak)", async () => {
+    const first = await mkEpic(teamId, "Same Title");
+    const second = await mkEpic(teamId, "same title");
+    const res = await request(app).get(`/api/epics?teamId=${teamId}`).set("Cookie", cookie);
+    expect(res.body.map((e: { id: number }) => e.id)).toEqual([first.id, second.id]);
+  });
+
   it("GET returns only the requested team's epics, title CI-ascending", async () => {
     const other = await mkTeam("Zeta");
     await mkEpic(teamId, "beta");

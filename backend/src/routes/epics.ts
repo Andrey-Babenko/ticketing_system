@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { isPrismaError } from "../lib/prismaErrors.js";
+import { parsePositiveInt, compareCi } from "../lib/ids.js";
 import { ApiError } from "../middleware/errors.js";
 import { validate } from "../middleware/validate.js";
 import { epicCreateSchema, epicUpdateSchema } from "../validation/epics.js";
@@ -32,24 +33,29 @@ function toDto(epic: EpicWithCount) {
 
 // Contract idPath is a canonical positive integer; anything else can't exist → 404.
 function parseId(raw: unknown): number {
-  if (typeof raw !== "string" || !/^[1-9][0-9]*$/.test(raw)) throw notFound();
-  return Number(raw);
+  const id = parsePositiveInt(raw);
+  if (id === null) throw notFound();
+  return id;
 }
 
-// GET /api/epics?teamId=X — missing/invalid param → 400, unknown team → 404 (openapi).
+// GET /api/epics?teamId=X — malformed param → 400; a well-formed id that cannot or does
+// not exist (unknown team, beyond-INT4 value) → 404 (openapi teamIdQueryRequired).
 epicsRouter.get("/", async (req, res) => {
   const raw = req.query.teamId;
-  if (typeof raw !== "string" || !/^[1-9][0-9]*$/.test(raw)) {
+  const teamId = parsePositiveInt(raw);
+  if (teamId === null && !(typeof raw === "string" && /^[1-9][0-9]*$/.test(raw))) {
     throw new ApiError(400, "VALIDATION", "teamId must be a positive integer", "teamId");
   }
-  const teamId = Number(raw);
 
-  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true } });
+  const team =
+    teamId === null
+      ? null // well-formed but beyond INT4 — cannot exist
+      : await prisma.team.findUnique({ where: { id: teamId }, select: { id: true } });
   if (!team) throw new ApiError(404, "NOT_FOUND", "Team not found");
 
-  const epics = await prisma.epic.findMany({ where: { teamId }, include: COUNT });
-  // CI title-ascending (contract); Prisma can't ORDER BY lower(title), list is small.
-  epics.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+  const epics = await prisma.epic.findMany({ where: { teamId: team.id }, include: COUNT });
+  // CI title-ascending, id tiebreak (titles may repeat, §5); Prisma can't ORDER BY lower().
+  epics.sort((a, b) => compareCi(a.title, b.title) || a.id - b.id);
   res.json(epics.map(toDto));
 });
 
@@ -64,11 +70,19 @@ epicsRouter.post("/", validate(epicCreateSchema), async (req, res) => {
   const team = await prisma.team.findUnique({ where: { id: teamId }, select: { id: true } });
   if (!team) throw new ApiError(400, "VALIDATION", "Team does not exist", "teamId");
 
-  const epic = await prisma.epic.create({
-    data: { teamId, title, description: description ?? null },
-    include: COUNT,
-  });
-  res.status(201).json(toDto(epic));
+  try {
+    const epic = await prisma.epic.create({
+      data: { teamId, title, description: description ?? null },
+      include: COUNT,
+    });
+    res.status(201).json(toDto(epic));
+  } catch (e) {
+    // FK violation — race backstop: the team was deleted between check and create.
+    if (isPrismaError(e, "P2003")) {
+      throw new ApiError(400, "VALIDATION", "Team does not exist", "teamId");
+    }
+    throw e;
+  }
 });
 
 epicsRouter.patch("/:id", validate(epicUpdateSchema), async (req, res) => {

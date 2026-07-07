@@ -1,11 +1,11 @@
 import { useRef } from "react";
-import { useId } from "react";
 import Modal from "./Modal";
-import { Field, Button } from "./ui";
+import { Field, TextArea, Button } from "./ui";
+import type { ApiError } from "../api/client";
 
 export type EpicFormMode =
-  | { mode: "create"; teamName: string }
-  | { mode: "edit"; epicId: number; originalTitle: string };
+  | { mode: "create"; teamId: number; teamName: string }
+  | { mode: "edit"; epicId: number; teamId: number; originalTitle: string };
 
 interface EpicFormModalProps {
   open: boolean;
@@ -16,7 +16,7 @@ interface EpicFormModalProps {
   onDescriptionChange: (description: string) => void;
   onSubmit: () => void;
   onClose: () => void;
-  error?: string;
+  error?: ApiError;
   pending?: boolean;
 }
 
@@ -35,7 +35,11 @@ export default function EpicFormModal({
   pending,
 }: EpicFormModalProps) {
   const titleInput = useRef<HTMLInputElement>(null);
-  const descriptionId = useId();
+
+  // Route the API error to the field it names; anything else is a form-level error
+  // (review finding: a description error was rendering under the Title input).
+  const fieldError = (name: string) => (error?.field === name ? error.message : undefined);
+  const formError = error && error.field !== "title" && error.field !== "description" ? error.message : undefined;
 
   return (
     <Modal
@@ -63,20 +67,17 @@ export default function EpicFormModal({
           required
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
-          error={error}
+          error={fieldError("title")}
         />
-        <div className="mb-3">
-          <label htmlFor={descriptionId} className="mb-1 block text-sm font-medium text-gray-700">
-            Description <span className="font-normal text-gray-400">(optional)</span>
-          </label>
-          <textarea
-            id={descriptionId}
-            rows={4}
-            value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-          />
-        </div>
+        <TextArea
+          label="Description"
+          hint="Optional"
+          rows={4}
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          error={fieldError("description")}
+        />
+        {formError && <p className="mb-3 text-sm text-red-600">{formError}</p>}
         <div className="mt-1 flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={onClose} pending={pending} pendingLabel="Cancel">
             Cancel

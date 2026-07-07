@@ -2,6 +2,7 @@ import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { isPrismaError } from "../lib/prismaErrors.js";
+import { parsePositiveInt, compareCi } from "../lib/ids.js";
 import { ApiError } from "../middleware/errors.js";
 import { validate } from "../middleware/validate.js";
 import { teamWriteSchema } from "../validation/teams.js";
@@ -32,11 +33,10 @@ function toDto(team: TeamWithCounts) {
 }
 
 // Contract idPath is a canonical positive integer; anything else can't exist → 404.
-// Regex, not Number(): Number coerces '0x10'/'1e2'/' 5' to real ids (review finding).
-// Express 5 types params as string | string[] (repeatable params) — hence unknown.
 function parseId(raw: unknown): number {
-  if (typeof raw !== "string" || !/^[1-9][0-9]*$/.test(raw)) throw notFound();
-  return Number(raw);
+  const id = parsePositiveInt(raw);
+  if (id === null) throw notFound();
+  return id;
 }
 
 async function assertNameFree(name: string, excludeId?: number) {
@@ -53,7 +53,8 @@ async function assertNameFree(name: string, excludeId?: number) {
 teamsRouter.get("/", async (_req, res) => {
   const teams = await prisma.team.findMany({ include: COUNTS });
   // CI name-ascending; Prisma can't ORDER BY lower(name) and the list is small.
-  teams.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+  // No tiebreak needed: names are CI-unique (team_name_ci index).
+  teams.sort((a, b) => compareCi(a.name, b.name));
   res.json(teams.map(toDto));
 });
 
