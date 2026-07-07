@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode, Ref } from "react";
 import { useId } from "react";
 
 export function AuthCard({ title, children }: { title: string; children: ReactNode }) {
@@ -48,6 +48,7 @@ const BUTTON_VARIANTS = {
 } as const;
 
 interface ButtonProps {
+  ref?: Ref<HTMLButtonElement>;
   pending?: boolean;
   pendingLabel?: string;
   children: ReactNode;
@@ -58,6 +59,7 @@ interface ButtonProps {
 }
 
 export function Button({
+  ref,
   pending,
   pendingLabel,
   children,
@@ -68,6 +70,7 @@ export function Button({
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       onClick={onClick}
       disabled={pending}

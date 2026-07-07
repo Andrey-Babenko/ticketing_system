@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { Button } from "./ui";
+import Modal from "./Modal";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -24,52 +25,39 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Move focus into the dialog on open (keyboard/screen-reader users never reach
-  // an aria-modal dialog otherwise) and restore it to the trigger on close.
-  useEffect(() => {
-    if (!open) return;
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    panelRef.current?.querySelector("button")?.focus();
-    return () => previouslyFocused?.focus();
-  }, [open]);
-
-  if (!open) return null;
+  const cancelRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div
-      className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
-      onClick={pending ? undefined : onCancel}
-      onKeyDown={(e) => {
-        if (e.key === "Escape" && !pending) onCancel();
-      }}
+    <Modal
+      open={open}
+      title={title}
+      role="alertdialog"
+      onClose={onCancel}
+      closeDisabled={pending}
+      initialFocusRef={cancelRef}
     >
-      <div
-        ref={panelRef}
-        role="alertdialog"
-        aria-modal="true"
-        aria-label={title}
-        className="w-full max-w-sm rounded-lg bg-white p-5 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="mb-2 text-base font-semibold text-gray-900">{title}</h2>
-        <div className="mb-4 text-sm text-gray-700">{children}</div>
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" pending={pending} pendingLabel="Cancel" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="danger"
-            pending={pending}
-            pendingLabel={pendingLabel ?? `${confirmLabel}…`}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
+      <div className="mb-4 text-sm text-gray-700">{children}</div>
+      <div className="flex justify-end gap-2">
+        <Button
+          ref={cancelRef}
+          type="button"
+          variant="secondary"
+          pending={pending}
+          pendingLabel="Cancel"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          variant="danger"
+          pending={pending}
+          pendingLabel={pendingLabel ?? `${confirmLabel}…`}
+          onClick={onConfirm}
+        >
+          {confirmLabel}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }

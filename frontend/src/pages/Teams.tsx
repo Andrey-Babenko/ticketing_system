@@ -1,37 +1,37 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTeams, createTeam, renameTeam, deleteTeam, teamsKey } from "../api/teams";
 import type { Team } from "../api/teams";
 import { ApiError } from "../api/client";
 import { formatRelative } from "../lib/dates";
-import { Field, Button } from "../components/ui";
+import { Button } from "../components/ui";
 import ConfirmDialog from "../components/ConfirmDialog";
+import TeamFormModal from "../components/TeamFormModal";
+import type { TeamFormMode } from "../components/TeamFormModal";
 
-// Interview decision: the bottom form serves both create and edit (Edit populates it).
-type FormMode = { mode: "create" } | { mode: "edit"; teamId: number; originalName: string };
+type FormState = { mode: "closed" } | TeamFormMode;
 
 export default function Teams() {
   const { data: teams, isPending, isError } = useTeams();
   const queryClient = useQueryClient();
 
-  const [formMode, setFormMode] = useState<FormMode>({ mode: "create" });
+  const [formState, setFormState] = useState<FormState>({ mode: "closed" });
   const [name, setName] = useState("");
   const [deleting, setDeleting] = useState<Team | null>(null);
-  const nameInput = useRef<HTMLInputElement>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: teamsKey });
 
-  const resetForm = () => {
-    setFormMode({ mode: "create" });
+  const closeForm = () => {
+    setFormState({ mode: "closed" });
     setName("");
   };
 
   const save = useMutation({
     mutationFn: () =>
-      formMode.mode === "edit" ? renameTeam(formMode.teamId, name) : createTeam(name),
+      formState.mode === "edit" ? renameTeam(formState.teamId, name) : createTeam(name),
     onSuccess: () => {
       invalidate();
-      resetForm();
+      closeForm();
     },
   });
 
@@ -40,8 +40,8 @@ export default function Teams() {
     onSuccess: (_data, id) => {
       invalidate();
       setDeleting(null);
-      // The deleted team may be the one loaded in the edit form — don't leave a ghost.
-      if (formMode.mode === "edit" && formMode.teamId === id) resetForm();
+      // The deleted team may be the one loaded in the edit modal — don't leave a ghost.
+      if (formState.mode === "edit" && formState.teamId === id) closeForm();
     },
     onError: () => {
       // Stale counts (another tab added a ticket/epic): banner renders remove.error below.
@@ -50,17 +50,16 @@ export default function Teams() {
     },
   });
 
-  const startEdit = (team: Team) => {
-    setFormMode({ mode: "edit", teamId: team.id, originalName: team.name });
-    setName(team.name);
+  const openCreate = () => {
+    setFormState({ mode: "create" });
+    setName("");
     save.reset();
-    nameInput.current?.focus();
   };
 
-  const focusCreate = () => {
-    resetForm();
+  const openEdit = (team: Team) => {
+    setFormState({ mode: "edit", teamId: team.id, originalName: team.name });
+    setName(team.name);
     save.reset();
-    nameInput.current?.focus();
   };
 
   const openDelete = (team: Team) => {
@@ -79,7 +78,7 @@ export default function Teams() {
           <h1 className="text-xl font-semibold text-gray-900">Teams</h1>
           <p className="text-sm text-gray-500">All verified users can view and manage all teams</p>
         </div>
-        <Button type="button" onClick={focusCreate}>
+        <Button type="button" onClick={openCreate}>
           + Create team
         </Button>
       </div>
@@ -96,7 +95,7 @@ export default function Teams() {
         <p className="py-8 text-center text-sm text-red-600">Could not load teams.</p>
       ) : teams.length === 0 ? (
         <p className="rounded border border-dashed border-gray-300 py-8 text-center text-sm text-gray-500">
-          No teams yet — create the first one below.
+          No teams yet — create the first one above.
         </p>
       ) : (
         <>
@@ -122,7 +121,7 @@ export default function Teams() {
                     <td className="py-2 text-right">
                       <button
                         type="button"
-                        onClick={() => startEdit(team)}
+                        onClick={() => openEdit(team)}
                         className="mr-2 text-blue-700 hover:underline"
                       >
                         Edit
@@ -148,42 +147,16 @@ export default function Teams() {
         </>
       )}
 
-      <form
-        className="mt-6 max-w-md rounded border border-gray-200 bg-gray-50 p-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          save.mutate();
-        }}
-      >
-        <h2 className="mb-2 text-sm font-semibold text-gray-800">
-          {formMode.mode === "edit" ? `Rename team “${formMode.originalName}”` : "Create team"}
-        </h2>
-        <Field
-          label="Team name"
-          ref={nameInput}
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          error={saveError?.message}
-        />
-        <div className="mt-1 flex gap-2">
-          <Button pending={save.isPending} pendingLabel="Saving…">
-            {formMode.mode === "edit" ? "Save" : "Create"}
-          </Button>
-          {formMode.mode === "edit" && (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                resetForm();
-                save.reset();
-              }}
-            >
-              Cancel
-            </Button>
-          )}
-        </div>
-      </form>
+      <TeamFormModal
+        open={formState.mode !== "closed"}
+        mode={formState.mode === "closed" ? { mode: "create" } : formState}
+        name={name}
+        onNameChange={setName}
+        onSubmit={() => save.mutate()}
+        onClose={closeForm}
+        error={saveError?.message}
+        pending={save.isPending}
+      />
 
       <ConfirmDialog
         open={deleting !== null}
