@@ -152,6 +152,19 @@ curl -i localhost:8080/api/health        # → back to 200 (lazy reconnect)
 docker compose exec db psql -U app -d ticketing -c '\dt'   # "Did not find any relations."
 ```
 
+### Comment edit/delete (S8.1, §14 stretch)
+
+Sign in as two different users and open the same ticket (comments have no access
+control beyond authorship — §12, no private teams):
+
+1. As user A, post a comment. Edit/Delete buttons appear only on your own comment.
+2. As user B, open the same ticket. User A's comment shows no Edit/Delete buttons.
+3. Edit your own comment → body updates, a "(edited)" marker appears, the ticket's
+   Modified stamp is unchanged (§7).
+4. Delete your own comment → it disappears from the list; Modified stamp still unchanged.
+5. `curl -X PATCH localhost:8080/api/tickets/<id>/comments/<commentId>` as a non-author
+   (with that user's session cookie) → `403 FORBIDDEN`.
+
 ## Project layout
 
 ```

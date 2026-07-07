@@ -443,8 +443,9 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [comments]
-      summary: Add an immutable comment (§7)
+      summary: Add a comment (§7)
       description: Author from session. MUST NOT touch the ticket's modifiedAt (§7).
+        Editable/deletable by its author only — see PATCH/DELETE below (S8.1, §14).
       requestBody:
         required: true
         content:
@@ -463,6 +464,45 @@ paths:
               schema: { $ref: '#/components/schemas/Comment' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tickets/{id}/comments/{commentId}:
+    parameters:
+      - $ref: '#/components/parameters/idPath'
+      - $ref: '#/components/parameters/commentIdPath'
+    patch:
+      tags: [comments]
+      summary: Edit own comment (S8.1, §7/§14)
+      description: Author-only. Sets editedAt server-side. MUST NOT touch the
+        ticket's modifiedAt (§7).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, description: Non-empty after trim }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [comments]
+      summary: Delete own comment (S8.1, §7/§14)
+      description: Author-only, hard delete. MUST NOT touch the ticket's modifiedAt (§7).
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
 components:
@@ -485,6 +525,12 @@ components:
       required: true
       schema: { type: integer, minimum: 1 }
       description: Missing/invalid → 400; a teamId that matches no team → 404
+    commentIdPath:
+      name: commentId
+      in: path
+      required: true
+      schema: { type: integer, minimum: 1 }
+      description: Must belong to the ticket named by {id}, else 404
 
   responses:
     Unauthenticated:
@@ -503,6 +549,11 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Authenticated but not the resource's owner (code=FORBIDDEN)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
 
   schemas:
     Error:
@@ -517,7 +568,7 @@ components:
               type: string
               description: Machine-readable; the full set used —
                 UNAUTHENTICATED, INVALID_CREDENTIALS, EMAIL_NOT_VERIFIED, EMAIL_TAKEN,
-                TOKEN_EXPIRED, TOKEN_INVALID, VALIDATION, NOT_FOUND,
+                TOKEN_EXPIRED, TOKEN_INVALID, VALIDATION, NOT_FOUND, FORBIDDEN,
                 DUPLICATE_TEAM_NAME, TEAM_NOT_EMPTY, EPIC_REFERENCED, EPIC_TEAM_MISMATCH,
                 INTERNAL (unexpected server error — 500)
             message: { type: string }
@@ -653,10 +704,15 @@ components:
 
     Comment:
       type: object
-      required: [id, ticketId, author, body, createdAt]
+      required: [id, ticketId, author, body, createdAt, editedAt]
       properties:
         id: { type: integer }
         ticketId: { type: integer }
         author: { $ref: '#/components/schemas/UserPublic' }
         body: { type: string }
         createdAt: { type: string, format: date-time }
+        editedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: null until the comment's first edit (S8.1)

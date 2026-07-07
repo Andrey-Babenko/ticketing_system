@@ -7,6 +7,7 @@ export interface Comment {
   author: { id: number; email: string };
   body: string;
   createdAt: string;
+  editedAt: string | null;
 }
 
 export const commentsKey = (ticketId: number) => ["comments", ticketId] as const;
@@ -18,6 +19,13 @@ export const createComment = (ticketId: number, body: string) =>
     method: "POST",
     body: JSON.stringify({ body }),
   });
+export const updateComment = (ticketId: number, commentId: number, body: string) =>
+  api<Comment>(`/tickets/${ticketId}/comments/${commentId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ body }),
+  });
+export const deleteComment = (ticketId: number, commentId: number) =>
+  api<undefined>(`/tickets/${ticketId}/comments/${commentId}`, { method: "DELETE" }); // 204
 
 export function useComments(ticketId: number) {
   return useQuery({

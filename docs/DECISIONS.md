@@ -202,3 +202,28 @@ Superseding a decision = new ADR + status update here, not silent editing.
 - **Consequences:** Per-team caching and race safety for free; ADR-10 maps to the library's
   canonical pattern instead of a hand-rolled variant. One well-known dependency; the
   stretch Angular twin uses its own idioms regardless.
+
+## ADR-15: Comment edit/delete semantics (S8.1, §14)
+
+- **Status:** accepted · 2026-07-08
+- **Context:** §14 lists "Edit or delete own comments" as an optional stretch feature
+  with no further semantics; §7 fixes only the mandatory-scope behavior (immutable,
+  never touches ticket `modifiedAt`). Every choice below needed a decision.
+- **Decision:**
+  - Ship both edit and delete, not just one.
+  - Track edits with a nullable `Comment.editedAt`, server-set on every successful edit;
+    the UI shows a "(edited)" marker. List order stays `createdAt` asc — edits don't
+    reorder the thread.
+  - Delete is a hard delete (no soft-delete placeholder) — §12 rules out audit history,
+    and no requirement depends on a deleted comment's trace surviving.
+  - A non-author edit/delete attempt is **403 FORBIDDEN**, not 404: comments carry no
+    privacy in this app (§12, no private teams — every user already sees every comment
+    and its author), so there is nothing to hide by pretending the resource is absent.
+  - Routes are nested under the existing mount:
+    `PATCH`/`DELETE /api/tickets/:id/comments/:commentId`, reusing `requireTicketId` so
+    a `commentId` that belongs to a different ticket is a clean 404.
+  - Same body-non-empty validation as create (`commentCreateSchema` rule reused).
+- **Consequences:** One migration (`editedAt` column); `docs/openapi.yaml` gains the two
+  operations, a `FORBIDDEN` error code, and a nullable `editedAt` on `Comment`. Ownership
+  is enforced server-side (`authorId === req.user.id`); the UI's own-comment button
+  gating (`useMe()`) is a convenience, not the security boundary.

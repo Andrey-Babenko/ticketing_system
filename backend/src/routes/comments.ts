@@ -5,7 +5,7 @@ import { isPrismaError } from "../lib/prismaErrors.js";
 import { parsePositiveInt } from "../lib/ids.js";
 import { ApiError } from "../middleware/errors.js";
 import { validate } from "../middleware/validate.js";
-import { commentCreateSchema } from "../validation/comments.js";
+import { commentCreateSchema, commentUpdateSchema } from "../validation/comments.js";
 
 // mergeParams: the ticket id lives on the mount path (/api/tickets/:id/comments).
 export const commentsRouter = Router({ mergeParams: true });
@@ -23,6 +23,7 @@ function toDto(comment: CommentWithAuthor) {
     author: comment.author,
     body: comment.body,
     createdAt: comment.createdAt,
+    editedAt: comment.editedAt,
   };
 }
 
@@ -63,4 +64,46 @@ commentsRouter.post("/", validate(commentCreateSchema), async (req, res) => {
     if (isPrismaError(e, "P2003")) throw new ApiError(404, "NOT_FOUND", "Ticket not found");
     throw e;
   }
+});
+
+// S8.1: comment must belong to the ticket on the mount path, and the caller must be its
+// author — no roles/admins exist (§12), so "own" is the only authorization rule.
+async function requireOwnComment(ticketId: number, rawCommentId: unknown, userId: number) {
+  const commentId = parsePositiveInt(rawCommentId);
+  const comment =
+    commentId === null ? null : await prisma.comment.findFirst({ where: { id: commentId, ticketId } });
+  if (!comment) throw new ApiError(404, "NOT_FOUND", "Comment not found");
+  if (comment.authorId !== userId) {
+    throw new ApiError(403, "FORBIDDEN", "You can only edit or delete your own comments");
+  }
+  return comment;
+}
+
+commentsRouter.patch("/:commentId", validate(commentUpdateSchema), async (req, res) => {
+  const ticketId = await requireTicketId((req.params as { id?: string }).id);
+  const own = await requireOwnComment(
+    ticketId,
+    (req.params as { commentId?: string }).commentId,
+    req.user!.id
+  );
+  const { body } = req.body as { body: string };
+
+  // §7: editing NEVER touches the Ticket row — no modifiedAt update here, ever.
+  const comment = await prisma.comment.update({
+    where: { id: own.id },
+    data: { body, editedAt: new Date() },
+    include: AUTHOR,
+  });
+  res.json(toDto(comment));
+});
+
+commentsRouter.delete("/:commentId", async (req, res) => {
+  const ticketId = await requireTicketId((req.params as { id?: string }).id);
+  const own = await requireOwnComment(
+    ticketId,
+    (req.params as { commentId?: string }).commentId,
+    req.user!.id
+  );
+  await prisma.comment.delete({ where: { id: own.id } });
+  res.status(204).end();
 });

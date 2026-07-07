@@ -32,10 +32,18 @@ describe("comments API (S5.3, §7)", () => {
       .set("Cookie", cookie)
       .send({ body: "  First!  " });
     expect(res.status).toBe(201);
-    expect(Object.keys(res.body).sort()).toEqual(["author", "body", "createdAt", "id", "ticketId"]);
+    expect(Object.keys(res.body).sort()).toEqual([
+      "author",
+      "body",
+      "createdAt",
+      "editedAt",
+      "id",
+      "ticketId",
+    ]);
     expect(res.body).toMatchObject({
       ticketId,
       body: "First!",
+      editedAt: null,
       author: { id: userId, email: "tester@example.com" },
     });
   });

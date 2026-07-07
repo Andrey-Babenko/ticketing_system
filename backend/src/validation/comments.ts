@@ -7,3 +7,6 @@ export const commentCreateSchema = z
     body: z.string().trim().min(1, "Comment body is required").max(50000),
   })
   .strict();
+
+// S8.1: same body rule applies to edits.
+export const commentUpdateSchema = commentCreateSchema;

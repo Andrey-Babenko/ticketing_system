@@ -114,6 +114,27 @@ test("full journey: signup through verify, teams, epics, tickets, drag, comments
     await expect(meta).toHaveText(modifiedStampBefore);
   });
 
+  // Only one comment exists at this point in the journey — scope by role, not by text,
+  // since editing swaps the body text for a textarea (the text locator would go stale).
+  const commentItem = page.getByRole("listitem");
+
+  await test.step("edit own comment — marks it (edited) (S8.1, §14)", async () => {
+    await commentItem.getByRole("button", { name: "Edit" }).click();
+    await commentItem.getByLabel("Edit comment").fill("Edited by the E2E suite.");
+    await commentItem.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Edited by the E2E suite.")).toBeVisible();
+    await expect(commentItem.getByText("(edited)")).toBeVisible();
+    await expect(page.getByText(/Modified .* UTC/)).toHaveText(modifiedStampBefore);
+  });
+
+  await test.step("delete own comment (S8.1, §14)", async () => {
+    await commentItem.getByRole("button", { name: "Delete" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Delete", exact: true }).click();
+    await expect(page.getByText("Edited by the E2E suite.")).not.toBeVisible();
+    await expect(page.getByText("Comments (0)")).toBeVisible();
+    await expect(page.getByText(/Modified .* UTC/)).toHaveText(modifiedStampBefore);
+  });
+
   await test.step("back to the board", async () => {
     await page.getByRole("link", { name: /Back to/ }).click();
     await expect(page).toHaveURL(new RegExp(`/board/${teamId}$`));

@@ -107,8 +107,9 @@ model Comment {
   ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade) // §6: delete ticket → delete comments
   authorId  Int
   author    User     @relation(fields: [authorId], references: [id], onDelete: Restrict)
-  body      String   // non-empty (§7); immutable — no modifiedAt by design (§7)
+  body      String   // non-empty (§7)
   createdAt DateTime @default(now())
+  editedAt  DateTime? // null = never edited; set on every successful edit (S8.1, ADR-15)
 
   @@index([ticketId])
 }
