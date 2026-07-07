@@ -51,7 +51,13 @@ export default function TicketCard({ ticket, epicName, disabled, justDraggedRef 
       to={`/tickets/${ticket.id}`}
       data-testid={`card-${ticket.id}`}
       onClick={(e) => {
-        if (justDraggedRef.current === ticket.id) e.preventDefault();
+        // Consume-and-clear here (not on a Board-side timer, review finding) so
+        // suppression never depends on how fast the browser fires the post-drag click
+        // relative to a hardcoded delay.
+        if (justDraggedRef.current === ticket.id) {
+          justDraggedRef.current = null;
+          e.preventDefault();
+        }
       }}
       className={`block touch-none rounded border border-gray-200 bg-white p-3 shadow-sm hover:border-blue-300 hover:shadow ${
         isDragging ? "opacity-40" : ""

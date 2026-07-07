@@ -14,24 +14,16 @@ import { useEpics } from "../api/epics";
 import { useTickets, updateTicket, ticketsKey, ticketKey } from "../api/tickets";
 import type { Ticket } from "../api/tickets";
 import { ApiError } from "../api/client";
-import { filterTickets, groupByState } from "../lib/boardFilters";
+import { filterTickets, groupByState, EMPTY_FILTERS } from "../lib/boardFilters";
 import type { Filters } from "../lib/boardFilters";
 import { applyOptimisticMove } from "../lib/boardDnd";
+import { parseCanonicalId } from "../lib/ids";
 import { STATE_ORDER } from "../lib/labels";
 import type { TicketState } from "../lib/labels";
 import Column from "../components/Column";
 import TicketCard, { TicketCardBody } from "../components/TicketCard";
 import FilterBar from "../components/FilterBar";
 import Toast from "../components/Toast";
-
-// Same non-coercing canonical-id guard as TicketDetail (review finding there):
-// '/board/1e2' must not silently resolve to team 1.
-function parseCanonicalId(raw: string | undefined): number | null {
-  if (!raw || !/^[1-9][0-9]*$/.test(raw)) return null;
-  return Number(raw);
-}
-
-const EMPTY_FILTERS: Filters = { search: "", type: null, epic: null };
 
 export default function Board() {
   const params = useParams();
@@ -62,36 +54,55 @@ export default function Board() {
   // Canonicalize: no param, or a param that doesn't match a real team → the URL for team[0].
   if (requestedId !== team.id) return <Navigate to={`/board/${team.id}`} replace />;
 
-  return <BoardForTeam teamId={team.id} filters={filters} onFiltersChange={setFilters} />;
+  // key={team.id}: force a full remount on team switch (review finding) — otherwise
+  // useMoveTicket's mutation callbacks keep closing over whatever teamId the LATEST
+  // render passed, so a drag started on team A that settles after switching to team B
+  // would write A's result into B's cache. Remounting means an in-flight mutation's
+  // callbacks stay bound to the team it actually started on.
+  return (
+    <BoardForTeam key={team.id} teamId={team.id} filters={filters} onFiltersChange={setFilters} />
+  );
 }
 
-// Board-local: the drag mutation is intentionally NOT invalidateAfterTicketWrite
-// (tickets.ts's shared helper). A state-only move changes no Team/Epic counts, and
-// invalidating those lists would refetch the mounted Teams/Epics selectors on every
-// drag for no visible reason. onError distinguishes a 404 (ticket deleted elsewhere —
-// refetch, never resurrect, ADR-10) from any other failure (snapshot revert, §8).
+// Board-local. onError distinguishes a 404 (ticket deleted elsewhere — refetch, never
+// resurrect, ADR-10) from any other failure (targeted per-ticket revert, §8). The revert
+// is targeted (not a full-list snapshot restore) so a failed drag can never clobber a
+// different ticket's already-succeeded concurrent move (review finding) — it re-reads
+// the CURRENT cache via the setQueryData updater form and only touches the one ticket.
+// Intentionally NOT invalidateAfterTicketWrite (tickets.ts's shared helper): a
+// state-only move changes no Team/Epic counts, and invalidating those lists would
+// refetch the mounted Teams/Epics selectors on every drag for no visible reason.
 function useMoveTicket(teamId: number, onFailure: (message: string) => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, state }: { id: number; state: TicketState }) => updateTicket(id, { state }),
     onMutate: async ({ id, state }) => {
       await queryClient.cancelQueries({ queryKey: ticketsKey(teamId) });
-      const previous = queryClient.getQueryData<Ticket[]>(ticketsKey(teamId));
-      if (previous) {
+      const previousList = queryClient.getQueryData<Ticket[]>(ticketsKey(teamId));
+      const previousTicket = previousList?.find((t) => t.id === id);
+      if (previousList) {
         queryClient.setQueryData(
           ticketsKey(teamId),
-          applyOptimisticMove(previous, id, state, new Date().toISOString())
+          applyOptimisticMove(previousList, id, state, new Date().toISOString())
         );
       }
-      return { previous };
+      return { previousTicket };
     },
-    onError: (err, _vars, context) => {
+    onError: (err, vars, context) => {
       if (err instanceof ApiError && err.status === 404) {
         queryClient.invalidateQueries({ queryKey: ticketsKey(teamId) });
         onFailure("This ticket was deleted.");
         return;
       }
-      if (context?.previous) queryClient.setQueryData(ticketsKey(teamId), context.previous);
+      // Targeted revert of just this ticket's row against the CURRENT cache (the
+      // updater form re-reads it at call time) — never a full-list snapshot restore,
+      // which would clobber a different ticket's already-succeeded concurrent drag.
+      const reverted = context?.previousTicket;
+      if (reverted) {
+        queryClient.setQueryData<Ticket[]>(ticketsKey(teamId), (current) =>
+          current?.map((t) => (t.id === vars.id ? reverted : t))
+        );
+      }
       onFailure("Couldn't move the ticket — try again.");
     },
     onSuccess: (saved) => {
@@ -143,17 +154,19 @@ function BoardForTeam({
   function handleDragEnd(event: DragEndEvent) {
     setActiveTicket(null);
     const { active, over } = event;
-    if (!over) return; // dropped outside any column — §8/ADR-10 no-op
-
     const ticketId = active.id as number;
+    // Any real drag (regardless of outcome — no-op included) can leave a trailing
+    // click on the dragged card once the pointer releases; set this unconditionally,
+    // before any early return, so every outcome suppresses it (review finding: the
+    // early returns below used to skip this, leaving no-op drags unsuppressed).
+    // TicketCard consumes-and-clears it inside onClick rather than us clearing it on a
+    // timer, which would race a click that doesn't fire in the same task (review finding).
+    justDraggedRef.current = ticketId;
+
+    if (!over) return; // dropped outside any column — §8/ADR-10 no-op
     const newState = over.id as TicketState;
     const ticket = tickets?.find((t) => t.id === ticketId);
     if (!ticket || ticket.state === newState) return; // same-column drop — no API call
-
-    justDraggedRef.current = ticketId;
-    setTimeout(() => {
-      justDraggedRef.current = null;
-    }, 0);
 
     setPendingIds((prev) => new Set(prev).add(ticketId));
     moveTicket.mutate(
@@ -174,7 +187,14 @@ function BoardForTeam({
       <div className="mb-3 flex items-center justify-between gap-4">
         <select
           value={teamId}
-          onChange={(e) => navigate(`/board/${e.target.value}`)}
+          onChange={(e) => {
+            // Reset filters on team switch (review finding) — a filter scoped to the
+            // old team's data (e.g. a specific epic id) would otherwise silently carry
+            // over and could filter out all of the new team's tickets with no
+            // indication why the board looks empty.
+            onFiltersChange(EMPTY_FILTERS);
+            navigate(`/board/${e.target.value}`);
+          }}
           className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm font-medium"
         >
           {teams?.map((t) => (

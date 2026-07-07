@@ -1,9 +1,12 @@
+import { EMPTY_FILTERS } from "../lib/boardFilters";
 import type { Filters } from "../lib/boardFilters";
 import { TYPE_LABELS, TYPE_ORDER } from "../lib/labels";
 import type { Epic } from "../api/epics";
-import { Button } from "./ui";
+import { Button, FIELD_SHELL, FIELD_SHELL_DEFAULT } from "./ui";
 
-const EMPTY_FILTERS: Filters = { search: "", type: null, epic: null };
+// Shares ui.tsx's border/focus treatment (FIELD_SHELL*) but not its `w-full` — this is
+// a horizontal toolbar, not a vertical form (Slice 6 review finding).
+const TOOLBAR_FIELD = `${FIELD_SHELL} ${FIELD_SHELL_DEFAULT}`;
 
 interface FilterBarProps {
   filters: Filters;
@@ -24,12 +27,12 @@ export default function FilterBar({ filters, onChange, epics, visibleCount }: Fi
         placeholder="Search titles…"
         value={filters.search}
         onChange={(e) => onChange({ ...filters, search: e.target.value })}
-        className="w-48 rounded border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+        className={`w-48 ${TOOLBAR_FIELD}`}
       />
       <select
         value={filters.type ?? ""}
         onChange={(e) => onChange({ ...filters, type: (e.target.value || null) as Filters["type"] })}
-        className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm"
+        className={`bg-white ${TOOLBAR_FIELD}`}
       >
         <option value="">All types</option>
         {TYPE_ORDER.map((t) => (
@@ -44,7 +47,7 @@ export default function FilterBar({ filters, onChange, epics, visibleCount }: Fi
           const v = e.target.value;
           onChange({ ...filters, epic: v === "" ? null : v === "none" ? "none" : Number(v) });
         }}
-        className="rounded border border-gray-300 bg-white px-2 py-1.5 text-sm"
+        className={`bg-white ${TOOLBAR_FIELD}`}
       >
         <option value="">All epics</option>
         <option value="none">No epic</option>

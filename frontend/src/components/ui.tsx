@@ -13,13 +13,16 @@ export function AuthCard({ title, children }: { title: string; children: ReactNo
 }
 
 // One source for the input/textarea/select shell styling — Field, TextArea, and Select
-// must never drift apart on focus/error treatment (review finding).
+// must never drift apart on focus/error treatment (review finding). Exported (without
+// `w-full`, which only suits a vertical form layout) so non-form consumers like
+// FilterBar's horizontal toolbar can share the same border/focus treatment without
+// inheriting Field's full-width assumption (Slice 6 review finding).
+export const FIELD_SHELL = "rounded border px-3 py-2 text-sm outline-none focus:ring-2";
+export const FIELD_SHELL_DEFAULT = "border-gray-300 focus:border-blue-400 focus:ring-blue-100";
+export const FIELD_SHELL_ERROR = "border-red-400 focus:ring-red-200";
+
 function fieldClass(error?: string, extra = ""): string {
-  return `w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 ${
-    error
-      ? "border-red-400 focus:ring-red-200"
-      : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
-  } ${extra}`;
+  return `w-full ${FIELD_SHELL} ${error ? FIELD_SHELL_ERROR : FIELD_SHELL_DEFAULT} ${extra}`;
 }
 
 function FieldShell({

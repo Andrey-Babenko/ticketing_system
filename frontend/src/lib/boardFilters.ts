@@ -8,6 +8,8 @@ export interface Filters {
   epic: number | "none" | null;
 }
 
+export const EMPTY_FILTERS: Filters = { search: "", type: null, epic: null };
+
 // §8: AND-combined, client-side (ADR-7).
 export function filterTickets(tickets: Ticket[], filters: Filters): Ticket[] {
   const needle = filters.search.trim().toLowerCase();

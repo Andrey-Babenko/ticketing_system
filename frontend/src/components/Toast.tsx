@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface ToastProps {
   message: string;
@@ -9,10 +9,17 @@ interface ToastProps {
 // (§8) — a lingering banner doesn't fit a transient error, and a full library is
 // overkill for one call site.
 export default function Toast({ message, onDismiss }: ToastProps) {
+  // Callers (Board.tsx) pass a fresh `() => setToast(null)` closure every render;
+  // depending on it directly would restart the timer on every unrelated parent
+  // re-render (review finding). Read the latest via a ref instead, so the effect only
+  // ever depends on `message`.
+  const onDismissRef = useRef(onDismiss);
+  onDismissRef.current = onDismiss;
+
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 5000);
+    const timer = setTimeout(() => onDismissRef.current(), 5000);
     return () => clearTimeout(timer);
-  }, [message, onDismiss]);
+  }, [message]);
 
   return (
     <div

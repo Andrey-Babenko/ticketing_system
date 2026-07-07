@@ -16,18 +16,12 @@ import {
 import type { Ticket, TicketCreate } from "../api/tickets";
 import { ApiError } from "../api/client";
 import { formatUtc } from "../lib/dates";
+import { parseCanonicalId } from "../lib/ids";
 import { TYPE_LABELS, STATE_LABELS, TYPE_ORDER, STATE_ORDER } from "../lib/labels";
 import type { TicketType, TicketState } from "../lib/labels";
 import { Field, TextArea, Select, Button } from "../components/ui";
 import ConfirmDialog from "../components/ConfirmDialog";
 import CommentsPanel from "../components/CommentsPanel";
-
-// The backend 404s non-canonical ids ('1e2', '010'); the SPA must not Number()-coerce
-// them into different, existing tickets (review finding). null = no valid id.
-function parseCanonicalId(raw: string | undefined): number | null {
-  if (!raw || !/^[1-9][0-9]*$/.test(raw)) return null;
-  return Number(raw);
-}
 
 function Message({ children, error }: { children: React.ReactNode; error?: boolean }) {
   return (

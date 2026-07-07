@@ -58,7 +58,10 @@ export function useTicket(id: number | null) {
 // One place that knows which caches a ticket write dirties: the team's board list
 // (old AND new team on a move), the single-ticket entry, and — because ticket rows
 // drive Team/Epic counts (the disabled-Delete affordance) — the teams and epics lists.
-// S6.2's drag mutation must use these too.
+// Board.tsx's drag mutation (Slice 6) deliberately does NOT call this: a state-only
+// move changes no Team/Epic counts, so invalidating those lists on every drag would
+// just refetch mounted Teams/Epics selectors for nothing. It does its own targeted
+// per-ticket cache update instead — see useMoveTicket in pages/Board.tsx.
 export function invalidateAfterTicketWrite(
   queryClient: QueryClient,
   saved: Ticket,
