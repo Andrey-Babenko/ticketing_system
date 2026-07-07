@@ -10,3 +10,5 @@ coverage/
 .ai_work_dir/
 .agents/
 skills-lock.json
+test-results/
+playwright-report/

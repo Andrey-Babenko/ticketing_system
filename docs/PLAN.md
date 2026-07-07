@@ -115,7 +115,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 7 — E2E, hardening, DoD sweep (est. 3h)
 
-- [ ] **S7.1 Playwright E2E** *(est. 2h)*
+- [x] **S7.1 Playwright E2E** *(est. 2h)*
   - **Goal:** The §11 "frontend flow": signup → fetch token from Mailpit API → verify → login → create team → epic → ticket → drag to In progress → refresh → still there (§13 ✓6) → comment visible. Plus the §8 failure path: route-intercept PATCH → 500 → card reverts + error shown.
   - **Files:** `e2e/happy.spec.ts`, `e2e/drag-failure.spec.ts`, `playwright.config.ts`.
 - [ ] **S7.2 DoD sweep + docs** *(est. 1h)*
