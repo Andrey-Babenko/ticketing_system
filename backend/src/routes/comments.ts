@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
+import { isPrismaError } from "../lib/prismaErrors.js";
 import { parsePositiveInt } from "../lib/ids.js";
 import { ApiError } from "../middleware/errors.js";
 import { validate } from "../middleware/validate.js";
@@ -50,10 +51,16 @@ commentsRouter.post("/", validate(commentCreateSchema), async (req, res) => {
   const ticketId = await requireTicketId((req.params as { id?: string }).id);
   const { body } = req.body as { body: string };
 
-  // §7: comments NEVER touch the Ticket row — no modifiedAt update here, ever.
-  const comment = await prisma.comment.create({
-    data: { ticketId, authorId: req.user!.id, body },
-    include: AUTHOR,
-  });
-  res.status(201).json(toDto(comment));
+  try {
+    // §7: comments NEVER touch the Ticket row — no modifiedAt update here, ever.
+    const comment = await prisma.comment.create({
+      data: { ticketId, authorId: req.user!.id, body },
+      include: AUTHOR,
+    });
+    res.status(201).json(toDto(comment));
+  } catch (e) {
+    // FK violation — race backstop: the ticket was deleted between check and create.
+    if (isPrismaError(e, "P2003")) throw new ApiError(404, "NOT_FOUND", "Ticket not found");
+    throw e;
+  }
 });

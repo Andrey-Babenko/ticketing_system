@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import { api } from "./client";
 
 export interface Epic {
@@ -30,7 +30,7 @@ export const deleteEpic = (id: number) => api<undefined>(`/epics/${id}`, { metho
 export function useEpics(teamId: number | null) {
   return useQuery({
     queryKey: epicsKey(teamId),
-    queryFn: teamId === null ? undefined : () => listEpics(teamId),
-    enabled: teamId !== null,
+    // skipToken: the built-in "no id yet" gate — no enabled flag, no undefined queryFn.
+    queryFn: teamId === null ? skipToken : () => listEpics(teamId),
   });
 }

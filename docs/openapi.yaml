@@ -451,6 +451,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [body]
               properties:
                 body: { type: string, minLength: 1, description: Non-empty after trim }
@@ -584,7 +585,9 @@ components:
 
     EpicUpdate:
       type: object
-      description: teamId deliberately absent — epics cannot move teams (§5)
+      additionalProperties: false
+      description: teamId deliberately absent — epics cannot move teams (§5);
+        unknown keys are rejected with 400 (strict schema)
       properties:
         title: { type: string, minLength: 1, maxLength: 200 }
         description: { type: string, nullable: true, maxLength: 50000 }
@@ -622,6 +625,7 @@ components:
 
     TicketCreate:
       type: object
+      additionalProperties: false
       required: [teamId, type, title, body]
       properties:
         teamId: { type: integer }
@@ -635,7 +639,9 @@ components:
 
     TicketUpdate:
       type: object
-      description: Any subset (ADR-5); a board drag sends only {state}. Merged-state
+      additionalProperties: false
+      description: Any subset of the KNOWN fields (ADR-5); a board drag sends only
+        {state}; unknown keys are rejected with 400 (strict schema). Merged-state
         validation applies (§6).
       properties:
         teamId: { type: integer }

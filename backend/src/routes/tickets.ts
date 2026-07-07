@@ -148,10 +148,8 @@ ticketsRouter.patch("/:id", validate(ticketUpdateSchema), async (req, res) => {
     body: body.body ?? stored.body,
   };
 
-  if (merged.teamId !== stored.teamId) await assertTeamExists(merged.teamId);
-  if (merged.epicId !== null) await assertEpicInTeam(merged.epicId, merged.teamId);
-
-  // No-op saves must not advance modifiedAt (§6) — skip the write entirely.
+  // No-op saves must not advance modifiedAt (§6) — skip validation AND the write:
+  // the stored state was validated when it was written.
   const isNoOp =
     merged.teamId === stored.teamId &&
     merged.epicId === stored.epicId &&
@@ -160,6 +158,16 @@ ticketsRouter.patch("/:id", validate(ticketUpdateSchema), async (req, res) => {
     merged.title === stored.title &&
     merged.body === stored.body;
   if (isNoOp) return res.json(toDto(stored));
+
+  if (merged.teamId !== stored.teamId) await assertTeamExists(merged.teamId);
+  // Re-prove the epic/team pair only when it changed — the stored pair is valid by
+  // construction (epics cannot move teams), so an unchanged pair needs no round trip.
+  if (
+    merged.epicId !== null &&
+    (merged.epicId !== stored.epicId || merged.teamId !== stored.teamId)
+  ) {
+    await assertEpicInTeam(merged.epicId, merged.teamId);
+  }
 
   try {
     const ticket = await prisma.ticket.update({
@@ -181,9 +189,8 @@ ticketsRouter.patch("/:id", validate(ticketUpdateSchema), async (req, res) => {
 
 ticketsRouter.delete("/:id", async (req, res) => {
   const id = parseId(req.params.id);
-  const existing = await prisma.ticket.findUnique({ where: { id }, select: { id: true } });
-  if (!existing) throw notFound();
-
+  // No pre-existence check: tickets have no referenced-delete rule (unlike teams/epics,
+  // whose pre-fetch drives the 409), so the P2025 catch alone covers the 404 path.
   try {
     await prisma.ticket.delete({ where: { id } }); // comments cascade via FK (§6)
   } catch (e) {

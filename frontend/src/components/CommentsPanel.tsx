@@ -1,27 +1,31 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useComments, createComment, commentsKey } from "../api/comments";
 import { ApiError } from "../api/client";
 import { formatUtc } from "../lib/dates";
-import { Button } from "./ui";
+import { TextArea, Button } from "./ui";
 
-// §7: this panel is fully independent of the ticket form — posting invalidates ONLY the
-// comments list, never the ticket query, and the ticket's modifiedAt must not change.
-export default function CommentsPanel({ ticketId }: { ticketId: number }) {
+// §7: this panel is fully independent of the ticket form — posting appends to the
+// comments cache only, never touches the ticket query, and the ticket's modifiedAt
+// must not change. memo(): the parent form re-renders per keystroke; this panel's
+// only prop is a stable primitive, so those renders skip the whole comment list.
+function CommentsPanel({ ticketId }: { ticketId: number }) {
   const { data: comments, isPending, isError } = useComments(ticketId);
   const [body, setBody] = useState("");
   const queryClient = useQueryClient();
 
   const post = useMutation({
     mutationFn: () => createComment(ticketId, body),
-    onSuccess: () => {
+    onSuccess: (created) => {
       setBody("");
-      queryClient.invalidateQueries({ queryKey: commentsKey(ticketId) });
+      // The 201 response IS the new comment — append it instead of refetching the list.
+      queryClient.setQueryData(commentsKey(ticketId), (old: unknown) =>
+        Array.isArray(old) ? [...old, created] : [created]
+      );
     },
   });
 
-  const error =
-    post.error instanceof ApiError ? post.error.message : post.isError ? "Post failed" : null;
+  const postError = post.error instanceof ApiError ? post.error : undefined;
 
   return (
     <section className="rounded border border-gray-200 bg-gray-50 p-4">
@@ -54,18 +58,19 @@ export default function CommentsPanel({ ticketId }: { ticketId: number }) {
         className="mt-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (body.trim() === "") return;
-          post.mutate();
+          post.mutate(); // no client-side gate: the backend's field-level 400 renders below
         }}
       >
-        <textarea
+        <TextArea
+          label="Add a comment"
           rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Add a comment…"
-          className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          error={postError?.field === "body" ? postError.message : undefined}
         />
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        {postError && postError.field !== "body" && (
+          <p className="mb-2 text-sm text-red-600">{postError.message}</p>
+        )}
         <Button pending={post.isPending} pendingLabel="Posting…">
           Post comment
         </Button>
@@ -73,3 +78,5 @@ export default function CommentsPanel({ ticketId }: { ticketId: number }) {
     </section>
   );
 }
+
+export default memo(CommentsPanel);

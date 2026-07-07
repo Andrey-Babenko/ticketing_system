@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef, ReactNode, Ref } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 import { useId } from "react";
 
 export function AuthCard({ title, children }: { title: string; children: ReactNode }) {
@@ -12,6 +12,41 @@ export function AuthCard({ title, children }: { title: string; children: ReactNo
   );
 }
 
+// One source for the input/textarea/select shell styling — Field, TextArea, and Select
+// must never drift apart on focus/error treatment (review finding).
+function fieldClass(error?: string, extra = ""): string {
+  return `w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 ${
+    error
+      ? "border-red-400 focus:ring-red-200"
+      : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
+  } ${extra}`;
+}
+
+function FieldShell({
+  id,
+  label,
+  hint,
+  error,
+  children,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      {children}
+      {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 interface FieldProps extends ComponentPropsWithRef<"input"> {
   label: string;
   hint?: string;
@@ -21,23 +56,14 @@ interface FieldProps extends ComponentPropsWithRef<"input"> {
 export function Field({ label, hint, error, ...inputProps }: FieldProps) {
   const id = useId();
   return (
-    <div className="mb-3">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
+    <FieldShell id={id} label={label} hint={hint} error={error}>
       <input
         id={id}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 ${
-          error
-            ? "border-red-400 focus:ring-red-200"
-            : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
-        }`}
+        className={fieldClass(error)}
         {...inputProps}
       />
-      {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
+    </FieldShell>
   );
 }
 
@@ -50,52 +76,36 @@ interface TextAreaProps extends ComponentPropsWithRef<"textarea"> {
 export function TextArea({ label, hint, error, ...textareaProps }: TextAreaProps) {
   const id = useId();
   return (
-    <div className="mb-3">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
+    <FieldShell id={id} label={label} hint={hint} error={error}>
       <textarea
         id={id}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 ${
-          error
-            ? "border-red-400 focus:ring-red-200"
-            : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
-        }`}
+        className={fieldClass(error)}
         {...textareaProps}
       />
-      {hint && !error && <p className="mt-1 text-xs text-gray-500">{hint}</p>}
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
+    </FieldShell>
   );
 }
 
 interface SelectProps extends ComponentPropsWithRef<"select"> {
   label: string;
+  hint?: string;
   error?: string;
 }
 
-export function Select({ label, error, children, ...selectProps }: SelectProps) {
+export function Select({ label, hint, error, children, ...selectProps }: SelectProps) {
   const id = useId();
   return (
-    <div className="mb-3">
-      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
+    <FieldShell id={id} label={label} hint={hint} error={error}>
       <select
         id={id}
         aria-invalid={error ? true : undefined}
-        className={`w-full rounded border bg-white px-3 py-2 text-sm outline-none focus:ring-2 ${
-          error
-            ? "border-red-400 focus:ring-red-200"
-            : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
-        }`}
+        className={fieldClass(error, "bg-white")}
         {...selectProps}
       >
         {children}
       </select>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
+    </FieldShell>
   );
 }
 
@@ -105,39 +115,31 @@ const BUTTON_VARIANTS = {
   secondary: "border border-gray-300 text-gray-700 hover:bg-gray-100",
 } as const;
 
-interface ButtonProps {
-  ref?: Ref<HTMLButtonElement>;
+interface ButtonProps extends ComponentPropsWithRef<"button"> {
   pending?: boolean;
   pendingLabel?: string;
-  children: ReactNode;
-  type?: "submit" | "button";
   variant?: keyof typeof BUTTON_VARIANTS;
   fullWidth?: boolean;
-  form?: string;
-  onClick?: () => void;
 }
 
+// Native <button> defaults to type="submit"; callers pass type="button" where needed.
 export function Button({
-  ref,
   pending,
   pendingLabel,
   children,
-  type = "submit",
   variant = "primary",
   fullWidth,
-  form,
-  onClick,
+  disabled,
+  className: _ignored,
+  ...buttonProps
 }: ButtonProps) {
   return (
     <button
-      ref={ref}
-      type={type}
-      form={form}
-      onClick={onClick}
-      disabled={pending}
+      disabled={pending || disabled}
       className={`rounded text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
         fullWidth ? "w-full px-4 py-2" : "px-3 py-1.5"
       } ${BUTTON_VARIANTS[variant]}`}
+      {...buttonProps}
     >
       {pending ? (pendingLabel ?? "Please wait…") : children}
     </button>

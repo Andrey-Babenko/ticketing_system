@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTeams } from "../api/teams";
+import type { Team } from "../api/teams";
 import { useEpics } from "../api/epics";
 import {
   useTicket,
   createTicket,
   updateTicket,
   deleteTicket,
-  ticketKey,
-  ticketsKey,
+  invalidateAfterTicketWrite,
+  invalidateAfterTicketDelete,
 } from "../api/tickets";
 import type { Ticket, TicketCreate } from "../api/tickets";
 import { ApiError } from "../api/client";
@@ -20,18 +22,35 @@ import { Field, TextArea, Select, Button } from "../components/ui";
 import ConfirmDialog from "../components/ConfirmDialog";
 import CommentsPanel from "../components/CommentsPanel";
 
+// The backend 404s non-canonical ids ('1e2', '010'); the SPA must not Number()-coerce
+// them into different, existing tickets (review finding). null = no valid id.
+function parseCanonicalId(raw: string | undefined): number | null {
+  if (!raw || !/^[1-9][0-9]*$/.test(raw)) return null;
+  return Number(raw);
+}
+
+function Message({ children, error }: { children: React.ReactNode; error?: boolean }) {
+  return (
+    <p className={`py-8 text-center text-sm ${error ? "text-red-600" : "text-gray-500"}`}>
+      {children}
+    </p>
+  );
+}
+
 export default function TicketDetail({ create }: { create?: boolean }) {
   const params = useParams();
-  const ticketId = create ? null : Number(params.id);
+  const ticketId = create ? null : parseCanonicalId(params.id);
 
   const { data: ticket, isPending, isError } = useTicket(ticketId);
-  // Loaded-teams gate: TicketForm's useState initializers read the teams list on first
-  // render, so in create mode the form must not mount before teams are available.
-  const { data: teams, isPending: teamsPending } = useTeams();
+  // TicketForm's useState initializers read the teams list on first render, so the
+  // form must not mount before teams are available — in either mode.
+  const { data: teams, isPending: teamsPending, isError: teamsError } = useTeams();
+
+  if (!create && ticketId === null) return <Message error>Ticket not found.</Message>;
+  if (teamsError) return <Message error>Could not load teams — try reloading.</Message>;
+  if (teamsPending) return <Message>Loading…</Message>;
 
   if (create) {
-    if (teamsPending)
-      return <p className="py-8 text-center text-sm text-gray-500">Loading…</p>;
     if (!teams || teams.length === 0)
       return (
         <div className="mx-auto w-full max-w-3xl">
@@ -45,28 +64,26 @@ export default function TicketDetail({ create }: { create?: boolean }) {
           </p>
         </div>
       );
-    return <TicketForm create />;
+    return <TicketForm teams={teams} />;
   }
-  if (isPending) return <p className="py-8 text-center text-sm text-gray-500">Loading ticket…</p>;
-  if (isError || !ticket)
-    return <p className="py-8 text-center text-sm text-red-600">Ticket not found.</p>;
+
+  if (isPending) return <Message>Loading ticket…</Message>;
+  if (isError || !ticket) return <Message error>Ticket not found.</Message>;
   // key: remount the form when a different ticket loads; local field state stays otherwise.
-  return <TicketForm key={ticket.id} ticket={ticket} />;
+  return <TicketForm key={ticket.id} teams={teams!} ticket={ticket} />;
 }
 
-function TicketForm({ ticket, create }: { ticket?: Ticket; create?: boolean }) {
+function TicketForm({ teams, ticket }: { teams: Team[]; ticket?: Ticket }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search] = useSearchParams();
-  const { data: teams } = useTeams();
 
   // Create mode: team pre-filled from ?team= (the board passes it), else first team.
+  // The parent gate guarantees teams is non-empty, so teamId is always a real number.
   const paramTeam = Number(search.get("team"));
-  const initialTeamId =
-    ticket?.teamId ??
-    (teams?.find((t) => t.id === paramTeam)?.id ?? teams?.[0]?.id ?? null);
-
-  const [teamId, setTeamId] = useState<number | null>(initialTeamId);
+  const [teamId, setTeamId] = useState<number>(
+    () => ticket?.teamId ?? teams.find((t) => t.id === paramTeam)?.id ?? teams[0].id
+  );
   const [epicId, setEpicId] = useState<number | null>(ticket?.epicId ?? null);
   const [type, setType] = useState<TicketType>(ticket?.type ?? "bug");
   const [state, setState] = useState<TicketState>(ticket?.state ?? "new");
@@ -78,37 +95,21 @@ function TicketForm({ ticket, create }: { ticket?: Ticket; create?: boolean }) {
 
   const save = useMutation({
     mutationFn: () => {
-      const data: TicketCreate = {
-        teamId: teamId!,
-        epicId,
-        type,
-        state,
-        title,
-        body,
-      };
+      const data: TicketCreate = { teamId, epicId, type, state, title, body };
       // ADR-5: send the full editable set; the server validates the merged result and
       // treats an unchanged payload as a no-op (modifiedAt untouched).
       return ticket ? updateTicket(ticket.id, data) : createTicket(data);
     },
     onSuccess: (saved) => {
-      // Invalidate by the RESPONSE's team — and the old team's list if the ticket moved.
-      queryClient.invalidateQueries({ queryKey: ticketsKey(saved.teamId) });
-      if (ticket && ticket.teamId !== saved.teamId) {
-        queryClient.invalidateQueries({ queryKey: ticketsKey(ticket.teamId) });
-      }
-      if (ticket) {
-        queryClient.setQueryData(ticketKey(ticket.id), saved); // stamps refresh in place
-      } else {
-        navigate(`/board/${saved.teamId}`); // interview decision: create lands on the board
-      }
+      invalidateAfterTicketWrite(queryClient, saved, ticket?.teamId);
+      if (!ticket) navigate(`/board/${saved.teamId}`); // create lands on the team's board
     },
   });
 
   const remove = useMutation({
     mutationFn: () => deleteTicket(ticket!.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ticketsKey(ticket!.teamId) });
-      queryClient.removeQueries({ queryKey: ticketKey(ticket!.id) });
+      invalidateAfterTicketDelete(queryClient, ticket!);
       navigate(`/board/${ticket!.teamId}`);
     },
     onError: () => setConfirmingDelete(false),
@@ -123,18 +124,17 @@ function TicketForm({ ticket, create }: { ticket?: Ticket; create?: boolean }) {
       : undefined;
   const removeError = remove.error instanceof ApiError ? remove.error.message : undefined;
 
-  const teamName = (id: number | null) => teams?.find((t) => t.id === id)?.name ?? "board";
-
-  if (!create && !ticket) return null; // unreachable; type narrowing aid
+  const backTeamId = ticket?.teamId ?? teamId;
+  const backTeamName = teams.find((t) => t.id === backTeamId)?.name ?? "board";
 
   return (
     <div className="mx-auto w-full max-w-5xl">
       <div className="mb-1">
         <Link
-          to={ticket ? `/board/${ticket.teamId}` : "/board"}
+          to={`/board/${backTeamId}`}
           className="text-sm font-medium text-blue-700 hover:underline"
         >
-          ← Back to {teamName(ticket?.teamId ?? teamId)}
+          ← Back to {backTeamName}
         </Link>
       </div>
 
@@ -154,7 +154,12 @@ function TicketForm({ ticket, create }: { ticket?: Ticket; create?: boolean }) {
         </div>
         <div className="flex shrink-0 gap-2">
           {ticket && (
-            <Button type="button" variant="danger" onClick={() => setConfirmingDelete(true)}>
+            <Button
+              type="button"
+              variant="danger"
+              disabled={save.isPending} // never delete while a save is in flight
+              onClick={() => setConfirmingDelete(true)}
+            >
               Delete
             </Button>
           )}
@@ -163,6 +168,7 @@ function TicketForm({ ticket, create }: { ticket?: Ticket; create?: boolean }) {
             form="ticket-form"
             pending={save.isPending}
             pendingLabel="Saving…"
+            disabled={remove.isPending}
           >
             {ticket ? "Save" : "Create"}
           </Button>
@@ -180,21 +186,20 @@ function TicketForm({ ticket, create }: { ticket?: Ticket; create?: boolean }) {
           id="ticket-form"
           onSubmit={(e) => {
             e.preventDefault();
-            if (teamId === null) return;
             save.mutate();
           }}
         >
           <div className="grid gap-x-4 sm:grid-cols-2">
             <Select
               label="Team"
-              value={teamId ?? ""}
+              value={teamId}
               error={fieldError("teamId")}
               onChange={(e) => {
                 setTeamId(Number(e.target.value));
                 setEpicId(null); // §6: changing team clears the selected epic
               }}
             >
-              {teams?.map((t) => (
+              {teams.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
