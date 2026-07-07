@@ -37,7 +37,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §3: duplicate email → 409; password <8 → 400; mail visible in Mailpit UI; no plaintext password anywhere; SMTP failure still creates the account (register default).
   - **Tests first:** supertest — 201 happy path (token row populated, argon2 verifies); 409 duplicate incl. case/whitespace variants; 400 short password; mailer mocked + called with token link.
   - **Files:** `backend/src/routes/auth.ts`, `backend/src/lib/{mailer,tokens}.ts`, `backend/src/validation/auth.ts`, `backend/test/auth.signup.test.ts`.
-- [ ] **S1.2 Verify + resend** *(est. 2h)*
+- [x] **S1.2 Verify + resend** *(est. 2h)*
   - **Goal:** `POST /api/auth/verify` with the four outcomes of ADR-9 (verified / already_verified / expired / invalid_or_expired); `POST /api/auth/resend-verification` `{email}` → generic 200, reissue-overwrites (§3), only for existing-unverified.
   - **Acceptance:** §3: token single-use (second call → already_verified); 24h expiry honored; reissue invalidates the old link; resend from expired screen works with email only (ADR-6).
   - **Tests first:** supertest — all four verify outcomes; old token dead after resend; resend for verified/unknown email → same generic 200, no mail sent.
