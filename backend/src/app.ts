@@ -22,9 +22,5 @@ app.get("/api/health", async (_req, res) => {
 
 app.use("/api/auth", authRouter);
 
-app.get("/api/auth/me", (req, res) => {
-  res.status(200).json(req.user);
-});
-
 app.use(notFoundHandler);
 app.use(errorHandler);

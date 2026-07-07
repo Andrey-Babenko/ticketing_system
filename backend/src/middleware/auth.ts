@@ -11,7 +11,7 @@ const PUBLIC_PATHS = new Set([
   "/api/auth/resend-verification",
 ]);
 
-const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (ADR-8)
+export const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (ADR-8)
 const EXTEND_THRESHOLD_MS = SESSION_LIFETIME_MS - 24 * 60 * 60 * 1000; // extend once >24h consumed
 
 export async function auth(req: Request, res: Response, next: NextFunction) {

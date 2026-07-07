@@ -42,7 +42,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §3: token single-use (second call → already_verified); 24h expiry honored; reissue invalidates the old link; resend from expired screen works with email only (ADR-6).
   - **Tests first:** supertest — all four verify outcomes; old token dead after resend; resend for verified/unknown email → same generic 200, no mail sent.
   - **Files:** `backend/src/routes/auth.ts`, `backend/test/auth.verify.test.ts`.
-- [ ] **S1.3 Login / logout / sessions** *(est. 2h)*
+- [x] **S1.3 Login / logout / sessions** *(est. 2h)*
   - **Goal:** ADR-8 session table + middleware (rolling 7-day, lazy expiry cleanup); `POST /api/auth/login` — 401 bad credentials, **403 EMAIL_NOT_VERIFIED** unverified (ADR-3), 200 sets HttpOnly SameSite=Lax cookie; `POST /api/auth/logout` deletes row + clears cookie; `GET /api/auth/me`.
   - **Acceptance:** §3, §9: session id never in URLs; unverified never gets a session; logout truly revokes (subsequent request 401); protected endpoint without cookie → 401. **This is the §11 "backend business flow" test.**
   - **Tests first:** supertest with cookie jar — full flow signup→verify→login→me→logout→401; unverified login → 403 code; wrong password → 401.

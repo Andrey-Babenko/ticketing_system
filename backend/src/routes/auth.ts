@@ -6,6 +6,7 @@ import { generateToken } from "../lib/tokens.js";
 import { sendVerificationEmail } from "../lib/mailer.js";
 import { validate } from "../middleware/validate.js";
 import { ApiError } from "../middleware/errors.js";
+import { SESSION_LIFETIME_MS } from "../middleware/auth.js";
 import { credentialsSchema, verifySchema, resendSchema } from "../validation/auth.js";
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // §3: tokens expire after 24 hours
@@ -93,4 +94,42 @@ authRouter.post("/resend-verification", validate(resendSchema), async (req, res)
     message:
       "If an unverified account exists for this address, a new verification email has been sent.",
   });
+});
+
+authRouter.post("/login", validate(credentialsSchema), async (req, res) => {
+  const { email, password } = req.body as { email: string; password: string };
+
+  // ADR-3 ordering: password check BEFORE verification check, so a wrong password on an
+  // unverified account yields the generic 401 and never leaks verification state.
+  // (Unknown-email short-circuit skips the hash — a timing side-channel, out of scope here.)
+  const user = await prisma.user.findUnique({ where: { email } });
+  const ok = user !== null && (await argon2.verify(user.passwordHash, password));
+  if (!ok) throw new ApiError(401, "INVALID_CREDENTIALS", "Wrong email or password");
+  if (!user.emailVerifiedAt) {
+    throw new ApiError(403, "EMAIL_NOT_VERIFIED", "Email not verified"); // NO session (ADR-3)
+  }
+
+  const sid = generateToken();
+  await prisma.session.create({
+    data: { id: sid, userId: user.id, expiresAt: new Date(Date.now() + SESSION_LIFETIME_MS) },
+  });
+  res.cookie("sid", sid, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_LIFETIME_MS,
+    // secure: deliberately absent — localhost HTTP (ADR-1); flip when APP_BASE_URL is https.
+  });
+  res.json({ id: user.id, email: user.email });
+});
+
+authRouter.post("/logout", async (req, res) => {
+  // Protected by the auth middleware; .catch covers a concurrent-logout race.
+  await prisma.session.delete({ where: { id: req.cookies.sid } }).catch(() => {});
+  res.clearCookie("sid", { httpOnly: true, sameSite: "lax", path: "/" });
+  res.status(204).end();
+});
+
+authRouter.get("/me", (req, res) => {
+  res.status(200).json(req.user);
 });
