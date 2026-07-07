@@ -7,6 +7,7 @@ import { authRouter } from "./routes/auth.js";
 import { teamsRouter } from "./routes/teams.js";
 import { epicsRouter } from "./routes/epics.js";
 import { ticketsRouter } from "./routes/tickets.js";
+import { commentsRouter } from "./routes/comments.js";
 
 export const app = express();
 
@@ -26,6 +27,7 @@ app.get("/api/health", async (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/teams", teamsRouter);
 app.use("/api/epics", epicsRouter);
+app.use("/api/tickets/:id/comments", commentsRouter);
 app.use("/api/tickets", ticketsRouter);
 
 app.use(notFoundHandler);
