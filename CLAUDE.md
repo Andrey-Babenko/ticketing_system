@@ -1,5 +1,18 @@
 # Ticketing System — 48h Hackathon
 
+## Project purpose (read this first)
+This is a learning project. The goal isn't only to ship the app — it's to build the user's
+skill at using Claude Code, and to practice good workflows and modern best practices for
+building software from scratch with an AI pair. Optimize decisions for that dual goal, not
+just for the fastest path to working code.
+
+**After each prompt/turn, give the user:**
+- Recommendations on the approach just taken (what could be done better, alternatives worth knowing about).
+- An outside, honest assessment of how effectively they are using Claude Code and directing
+  the workflow this turn — not empty praise; call out real mistakes, inefficiencies, or missed
+  opportunities (e.g. skipped verification, vague prompts, working around a tool instead of
+  understanding it, not using the plan/TDD/review skills when they'd have helped).
+
 ## Source of truth
 - Requirements: docs/spec.md (cite section numbers when justifying decisions)
 - Task list: docs/PLAN.md — check off tasks as they complete; never silently reorder
