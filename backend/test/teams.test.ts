@@ -168,6 +168,16 @@ describe("teams — CRUD, uniqueness, counts, 409 rules (S3.1)", () => {
     expect(nonNumeric.status).toBe(404);
   });
 
+  it("rejects non-canonical numeric ids instead of coercing them (contract: integer path)", async () => {
+    const team = (await createTeam("Sixteen")).body;
+    // '0x10' would Number()-coerce to 16 — must 404, never touch team 16.
+    for (const raw of ["0x10", "1e2", "%205", "16.0", "+7"]) {
+      const res = await request(app).delete(`/api/teams/${raw}`).set("Cookie", cookie);
+      expect(res.status, `id=${raw}`).toBe(404);
+    }
+    expect(await prisma.team.count({ where: { id: team.id } })).toBe(1);
+  });
+
   it("rejects an empty rename with 400", async () => {
     const team = (await createTeam("NonEmpty")).body;
     const res = await request(app)

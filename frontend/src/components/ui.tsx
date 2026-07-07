@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 import { useId } from "react";
 
 export function AuthCard({ title, children }: { title: string; children: ReactNode }) {
@@ -12,7 +12,7 @@ export function AuthCard({ title, children }: { title: string; children: ReactNo
   );
 }
 
-interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
+interface FieldProps extends ComponentPropsWithRef<"input"> {
   label: string;
   hint?: string;
   error?: string;
@@ -41,21 +41,39 @@ export function Field({ label, hint, error, ...inputProps }: FieldProps) {
   );
 }
 
+const BUTTON_VARIANTS = {
+  primary: "bg-blue-600 text-white hover:bg-blue-700",
+  danger: "bg-red-600 text-white hover:bg-red-700",
+  secondary: "border border-gray-300 text-gray-700 hover:bg-gray-100",
+} as const;
+
 interface ButtonProps {
   pending?: boolean;
   pendingLabel?: string;
   children: ReactNode;
   type?: "submit" | "button";
+  variant?: keyof typeof BUTTON_VARIANTS;
+  fullWidth?: boolean;
   onClick?: () => void;
 }
 
-export function Button({ pending, pendingLabel, children, type = "submit", onClick }: ButtonProps) {
+export function Button({
+  pending,
+  pendingLabel,
+  children,
+  type = "submit",
+  variant = "primary",
+  fullWidth,
+  onClick,
+}: ButtonProps) {
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={pending}
-      className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+      className={`rounded text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
+        fullWidth ? "w-full px-4 py-2" : "px-3 py-1.5"
+      } ${BUTTON_VARIANTS[variant]}`}
     >
       {pending ? (pendingLabel ?? "Please wait…") : children}
     </button>

@@ -54,7 +54,7 @@ export default function Login() {
         {apiError && !apiError.field && !notVerified && (
           <p className="mb-3 text-sm text-red-600">{apiError.message}</p>
         )}
-        <Button pending={m.isPending} pendingLabel="Logging in…">
+        <Button fullWidth pending={m.isPending} pendingLabel="Logging in…">
           Log in
         </Button>
       </form>

@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import { Button } from "./ui";
 
 interface ConfirmDialogProps {
   open: boolean;
   title: string;
   children: ReactNode;
   confirmLabel?: string;
+  pendingLabel?: string;
   pending?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -16,17 +19,34 @@ export default function ConfirmDialog({
   title,
   children,
   confirmLabel = "Delete",
+  pendingLabel,
   pending,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Move focus into the dialog on open (keyboard/screen-reader users never reach
+  // an aria-modal dialog otherwise) and restore it to the trigger on close.
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    panelRef.current?.querySelector("button")?.focus();
+    return () => previouslyFocused?.focus();
+  }, [open]);
+
   if (!open) return null;
+
   return (
     <div
       className="fixed inset-0 z-20 flex items-center justify-center bg-black/40 p-4"
       onClick={pending ? undefined : onCancel}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && !pending) onCancel();
+      }}
     >
       <div
+        ref={panelRef}
         role="alertdialog"
         aria-modal="true"
         aria-label={title}
@@ -36,22 +56,18 @@ export default function ConfirmDialog({
         <h2 className="mb-2 text-base font-semibold text-gray-900">{title}</h2>
         <div className="mb-4 text-sm text-gray-700">{children}</div>
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={pending}
-            className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-          >
+          <Button type="button" variant="secondary" pending={pending} pendingLabel="Cancel" onClick={onCancel}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="danger"
+            pending={pending}
+            pendingLabel={pendingLabel ?? `${confirmLabel}…`}
             onClick={onConfirm}
-            disabled={pending}
-            className="rounded bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
           >
-            {pending ? "Deleting…" : confirmLabel}
-          </button>
+            {confirmLabel}
+          </Button>
         </div>
       </div>
     </div>

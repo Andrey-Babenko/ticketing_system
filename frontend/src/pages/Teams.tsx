@@ -4,10 +4,11 @@ import { useTeams, createTeam, renameTeam, deleteTeam, teamsKey } from "../api/t
 import type { Team } from "../api/teams";
 import { ApiError } from "../api/client";
 import { formatRelative } from "../lib/dates";
+import { Field, Button } from "../components/ui";
 import ConfirmDialog from "../components/ConfirmDialog";
 
-// Q2 decision: the bottom form serves both create and edit (Edit populates it).
-type FormMode = { mode: "create" } | { mode: "edit"; teamId: number };
+// Interview decision: the bottom form serves both create and edit (Edit populates it).
+type FormMode = { mode: "create" } | { mode: "edit"; teamId: number; originalName: string };
 
 export default function Teams() {
   const { data: teams, isPending, isError } = useTeams();
@@ -16,7 +17,6 @@ export default function Teams() {
   const [formMode, setFormMode] = useState<FormMode>({ mode: "create" });
   const [name, setName] = useState("");
   const [deleting, setDeleting] = useState<Team | null>(null);
-  const [rowError, setRowError] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: teamsKey });
@@ -37,20 +37,21 @@ export default function Teams() {
 
   const remove = useMutation({
     mutationFn: (id: number) => deleteTeam(id),
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       invalidate();
       setDeleting(null);
+      // The deleted team may be the one loaded in the edit form — don't leave a ghost.
+      if (formMode.mode === "edit" && formMode.teamId === id) resetForm();
     },
-    onError: (e) => {
-      // Stale counts (another tab added a ticket/epic): show why and refetch truth.
-      setRowError(e instanceof ApiError ? e.message : "Delete failed");
+    onError: () => {
+      // Stale counts (another tab added a ticket/epic): banner renders remove.error below.
       setDeleting(null);
       invalidate();
     },
   });
 
   const startEdit = (team: Team) => {
-    setFormMode({ mode: "edit", teamId: team.id });
+    setFormMode({ mode: "edit", teamId: team.id, originalName: team.name });
     setName(team.name);
     save.reset();
     nameInput.current?.focus();
@@ -62,9 +63,14 @@ export default function Teams() {
     nameInput.current?.focus();
   };
 
+  const openDelete = (team: Team) => {
+    remove.reset(); // clear a previous failure's banner when starting a new attempt
+    setDeleting(team);
+  };
+
   const saveError = save.error instanceof ApiError ? save.error : undefined;
-  const editingName =
-    formMode.mode === "edit" ? teams?.find((t) => t.id === formMode.teamId)?.name : undefined;
+  const removeError =
+    remove.error instanceof ApiError ? remove.error.message : remove.isError ? "Delete failed" : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -73,18 +79,14 @@ export default function Teams() {
           <h1 className="text-xl font-semibold text-gray-900">Teams</h1>
           <p className="text-sm text-gray-500">All verified users can view and manage all teams</p>
         </div>
-        <button
-          type="button"
-          onClick={focusCreate}
-          className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-        >
+        <Button type="button" onClick={focusCreate}>
           + Create team
-        </button>
+        </Button>
       </div>
 
-      {rowError && (
+      {removeError && (
         <p className="mb-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {rowError}
+          {removeError}
         </p>
       )}
 
@@ -129,7 +131,7 @@ export default function Teams() {
                         type="button"
                         disabled={busy}
                         title={busy ? "Delete is disabled while a team contains tickets or epics" : undefined}
-                        onClick={() => setDeleting(team)}
+                        onClick={() => openDelete(team)}
                         className="text-red-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-300 disabled:no-underline"
                       >
                         Delete
@@ -154,44 +156,31 @@ export default function Teams() {
         }}
       >
         <h2 className="mb-2 text-sm font-semibold text-gray-800">
-          {formMode.mode === "edit" ? `Rename team “${editingName ?? ""}”` : "Create team"}
+          {formMode.mode === "edit" ? `Rename team “${formMode.originalName}”` : "Create team"}
         </h2>
-        <label htmlFor="team-name" className="mb-1 block text-sm font-medium text-gray-700">
-          Team name
-        </label>
-        <input
-          id="team-name"
+        <Field
+          label="Team name"
           ref={nameInput}
+          required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          required
-          aria-invalid={saveError ? true : undefined}
-          className={`mb-1 w-full rounded border px-3 py-2 text-sm outline-none focus:ring-2 ${
-            saveError
-              ? "border-red-400 focus:ring-red-200"
-              : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
-          }`}
+          error={saveError?.message}
         />
-        {saveError && <p className="mb-2 text-xs text-red-600">{saveError.message}</p>}
-        <div className="mt-2 flex gap-2">
-          <button
-            type="submit"
-            disabled={save.isPending}
-            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
-          >
-            {save.isPending ? "Saving…" : formMode.mode === "edit" ? "Save" : "Create"}
-          </button>
+        <div className="mt-1 flex gap-2">
+          <Button pending={save.isPending} pendingLabel="Saving…">
+            {formMode.mode === "edit" ? "Save" : "Create"}
+          </Button>
           {formMode.mode === "edit" && (
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={() => {
                 resetForm();
                 save.reset();
               }}
-              className="rounded border border-gray-300 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
             >
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </form>

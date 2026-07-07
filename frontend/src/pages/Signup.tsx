@@ -76,7 +76,7 @@ export default function Signup() {
         {apiError && !apiError.field && (
           <p className="mb-3 text-sm text-red-600">{apiError.message}</p>
         )}
-        <Button pending={m.isPending} pendingLabel="Creating account…">
+        <Button fullWidth pending={m.isPending} pendingLabel="Creating account…">
           Sign up
         </Button>
       </form>
