@@ -74,7 +74,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 4 — Epics (est. 3h)
 
-- [ ] **S4.1 Epics API** *(est. 1.5h)*
+- [x] **S4.1 Epics API** *(est. 1.5h)*
   - **Goal:** `GET /api/epics?teamId=` (title + `_count` tickets + description), create (team immutable after, §5), edit title/description, delete → 409 while referenced (§5/§9); no-op edit rule.
   - **Acceptance:** §5: empty title → 400; team change attempt → 400; delete referenced → 409.
   - **Tests first:** supertest matrix incl. immutable-team and 409 path.

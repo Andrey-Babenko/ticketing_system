@@ -5,6 +5,7 @@ import { auth } from "./middleware/auth.js";
 import { notFoundHandler, errorHandler } from "./middleware/errors.js";
 import { authRouter } from "./routes/auth.js";
 import { teamsRouter } from "./routes/teams.js";
+import { epicsRouter } from "./routes/epics.js";
 
 export const app = express();
 
@@ -23,6 +24,7 @@ app.get("/api/health", async (_req, res) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/teams", teamsRouter);
+app.use("/api/epics", epicsRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
