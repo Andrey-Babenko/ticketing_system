@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import { prisma } from "./lib/prisma.js";
 import { auth } from "./middleware/auth.js";
 import { notFoundHandler, errorHandler } from "./middleware/errors.js";
+import { authRouter } from "./routes/auth.js";
 
 export const app = express();
 
@@ -18,6 +19,8 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ status: "error" });
   }
 });
+
+app.use("/api/auth", authRouter);
 
 app.get("/api/auth/me", (req, res) => {
   res.status(200).json(req.user);

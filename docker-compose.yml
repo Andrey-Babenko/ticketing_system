@@ -29,6 +29,11 @@ services:
       PORT: "3000"
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM: ${SMTP_FROM:-noreply@ticketing.local}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
     ports:
       - "3000:3000"
     depends_on:

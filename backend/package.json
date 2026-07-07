@@ -16,14 +16,17 @@
   "private": "true",
   "dependencies": {
     "@prisma/client": "^6.19.3",
+    "argon2": "^0.44.0",
     "cookie-parser": "^1.4.7",
     "express": "^5.2.1",
+    "nodemailer": "^9.0.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.0",
+    "@types/nodemailer": "^8.0.1",
     "@types/supertest": "^7.2.0",
     "prisma": "^6.19.3",
     "supertest": "^7.2.2",

@@ -32,7 +32,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 
 ## Slice 1 — Auth & verification API (est. 6h) — **top risk, first**
 
-- [ ] **S1.1 Sign-up + verification email** *(est. 2h)*
+- [x] **S1.1 Sign-up + verification email** *(est. 2h)*
   - **Goal:** `POST /api/auth/signup` — trim+lowercase email (ADR-12), Argon2id hash (§3), create unverified user + token columns (ADR-9), send mail via nodemailer→Mailpit with `${APP_BASE_URL}/verify?token=…` link (SMTP_* envs, relay1-capable §3).
   - **Acceptance:** §3: duplicate email → 409; password <8 → 400; mail visible in Mailpit UI; no plaintext password anywhere; SMTP failure still creates the account (register default).
   - **Tests first:** supertest — 201 happy path (token row populated, argon2 verifies); 409 duplicate incl. case/whitespace variants; 400 short password; mailer mocked + called with token link.
