@@ -44,6 +44,12 @@ postgres 5432 (app/app/ticketing), mailpit 8025 UI + 1025 SMTP, angular stub 808
 Dev mode (hot reload): run infra in Docker, apps on the host. Vite (:5173) proxies /api to the
 backend (:3000), matching nginx in prod. Port 8080 is the prod build only — no reload. See README.
 
+**Worth knowing:** `npm test` runs the backend in-process against the test DB — it never
+rebuilds the `backend` container. Passing tests do not mean the Docker backend is current.
+After backend changes, run `docker compose up --build -d backend` before manually verifying
+through the compose stack (curl, preview tools, or the frontend dev server proxying to :3000/
+:8080), or a stale container will silently serve old routes.
+
 ## Iron rules
 - The backend validates EVERYTHING (enums, references, cross-team epic rule) — spec §6.
 - Referenced deletes (team with tickets/epics, epic with tickets) → HTTP 409. Spec §9.
