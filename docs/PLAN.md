@@ -79,7 +79,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §5: empty title → 400; team change attempt → 400; delete referenced → 409.
   - **Tests first:** supertest matrix incl. immutable-team and 409 path.
   - **Files:** `backend/src/routes/epics.ts`, `backend/src/validation/epics.ts`, `backend/test/epics.test.ts`.
-- [ ] **S4.2 Epics UI** *(est. 1.5h)*
+- [x] **S4.2 Epics UI** *(est. 1.5h)*
   - **Goal:** Wireframe-5: team selector (name-asc, from URL ?team=), table (Title, Tickets, Modified, description preview), create bound to selected team (shown read-only), edit panel (Title, Description, Cancel/Save), delete disabled while referenced; zero-teams empty state → link to Teams.
   - **Acceptance:** §5, §10; screen team-scoped; no team field in edit.
   - **Files:** `frontend/src/pages/Epics.tsx`, `frontend/src/api/epics.ts`.
