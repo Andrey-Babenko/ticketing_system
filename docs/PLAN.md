@@ -67,7 +67,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §4: empty-after-trim name → 400; case-variant duplicate → 409; delete with children → 409 envelope; timestamps ISO-8601 UTC (§9).
   - **Tests first:** supertest — full matrix above incl. rename-to-own-name-different-case succeeds; unauthenticated → 401.
   - **Files:** `backend/src/routes/teams.ts`, `backend/src/validation/teams.ts`, `backend/test/teams.test.ts`.
-- [ ] **S3.2 Teams UI** *(est. 1.5h)*
+- [x] **S3.2 Teams UI** *(est. 1.5h)*
   - **Goal:** Wireframe-4 table (Name, Tickets, Epics, Modified, Edit/Delete), create form, delete disabled at counts>0 with caption + 409 handled anyway (stale counts), rename inline/modal.
   - **Acceptance:** §4, §10: validation messages visible; counts from API; loading/empty states (§11).
   - **Files:** `frontend/src/pages/Teams.tsx`, `frontend/src/api/teams.ts`.

@@ -1,9 +1,15 @@
 @import "tailwindcss";
 
 /* Light-only for the hackathon: utilities set explicit colors, so `light dark`
-   would desync native form controls from our palette. */
+   would desync native form controls from our palette. Explicit body colors too —
+   color-scheme alone doesn't stop a dark-mode browser rendering a dark canvas. */
 :root {
   color-scheme: light;
+}
+
+body {
+  background-color: var(--color-gray-50);
+  color: var(--color-gray-900);
 }
 
 /* Kept as plain CSS: #root lives in index.html. */

@@ -25,9 +25,12 @@ function toDto(team: TeamWithCounts) {
 }
 
 // Non-numeric ids can never exist → 404 (400 stays reserved for body validation).
-function parseId(raw: string): number {
+// Express 5 types params as string | string[] (repeatable params) — hence the unknown.
+function parseId(raw: unknown): number {
   const id = Number(raw);
-  if (!Number.isInteger(id) || id < 1) throw new ApiError(404, "NOT_FOUND", "Team not found");
+  if (typeof raw !== "string" || !Number.isInteger(id) || id < 1) {
+    throw new ApiError(404, "NOT_FOUND", "Team not found");
+  }
   return id;
 }
 
