@@ -55,7 +55,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §3, §10: field errors inline from envelope; verified login lands on /board; unverified shows resend which posts the typed email.
   - **Tests first:** (deferred to E2E in S7 — forms are thin over tested API).
   - **Files:** `frontend/src/pages/{Login,Signup}.tsx`, `frontend/src/api/auth.ts`.
-- [ ] **S2.2 Verification result screen + guards** *(est. 1.5h)*
+- [x] **S2.2 Verification result screen + guards** *(est. 1.5h)*
   - **Goal:** /verify?token=… calls verify once (StrictMode-guarded, ADR-9), renders verified/already_verified → "Continue to login", expired/invalid → error + email input + resend (ADR-6); route guards: business routes require session, /login|/signup redirect away when authed.
   - **Acceptance:** §3, §10: all four variants reachable; expired resend issues fresh mail; no auto-login after verify.
   - **Files:** `frontend/src/pages/Verify.tsx`, `frontend/src/lib/authGuard.tsx`.

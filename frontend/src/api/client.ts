@@ -30,6 +30,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     if (
       res.status === 401 &&
       err.code === "UNAUTHENTICATED" &&
+      path !== "/auth/me" && // the guards handle this 401 declaratively (authGuard.tsx)
       !PUBLIC_PATHS.some((p) => window.location.pathname.startsWith(p))
     ) {
       window.location.assign("/login");

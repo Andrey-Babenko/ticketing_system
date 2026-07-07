@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import Layout from "./components/Layout";
+import { RequireAuth, RedirectIfAuthed } from "./lib/authGuard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Verify from "./pages/Verify";
@@ -10,12 +11,14 @@ import TicketNew from "./pages/TicketNew";
 import TicketDetail from "./pages/TicketDetail";
 
 // Auth screens render outside Layout — no Board/Teams/Epics tabs on wireframe 2.
+// /verify is deliberately unguarded: the screen is a function of the token, not the
+// session — a logged-in user re-clicking a link must still see the result.
 export const router = createBrowserRouter([
-  { path: "/login", element: <Login /> },
-  { path: "/signup", element: <Signup /> },
+  { path: "/login", element: <RedirectIfAuthed><Login /></RedirectIfAuthed> },
+  { path: "/signup", element: <RedirectIfAuthed><Signup /></RedirectIfAuthed> },
   { path: "/verify", element: <Verify /> },
   {
-    element: <Layout />,
+    element: <RequireAuth><Layout /></RequireAuth>,
     children: [
       { index: true, element: <Navigate to="/board" replace /> },
       { path: "/board", element: <Board /> },
