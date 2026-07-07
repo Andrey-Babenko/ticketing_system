@@ -45,10 +45,12 @@ Dev mode (hot reload): run infra in Docker, apps on the host. Vite (:5173) proxi
 backend (:3000), matching nginx in prod. Port 8080 is the prod build only — no reload. See README.
 
 **Worth knowing:** `npm test` runs the backend in-process against the test DB — it never
-rebuilds the `backend` container. Passing tests do not mean the Docker backend is current.
-After backend changes, run `docker compose up --build -d backend` before manually verifying
-through the compose stack (curl, preview tools, or the frontend dev server proxying to :3000/
-:8080), or a stale container will silently serve old routes.
+rebuilds the `backend` container, and there is no equivalent watcher for `frontend` at all.
+Passing tests do not mean either Docker image is current. After backend OR frontend changes,
+run `docker compose up --build -d backend frontend` before manually verifying through the
+compose stack (curl, preview tools, Playwright) or a stale container will silently serve old
+routes/pages — this cost real time in Slice 7, where a stale `frontend` image kept serving
+Slice-0 placeholder pages under real routes with no error, only a wrong-looking screen.
 
 ## Iron rules
 - The backend validates EVERYTHING (enums, references, cross-team epic rule) — spec §6.

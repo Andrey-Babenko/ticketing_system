@@ -118,7 +118,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 - [x] **S7.1 Playwright E2E** *(est. 2h)*
   - **Goal:** The §11 "frontend flow": signup → fetch token from Mailpit API → verify → login → create team → epic → ticket → drag to In progress → refresh → still there (§13 ✓6) → comment visible. Plus the §8 failure path: route-intercept PATCH → 500 → card reverts + error shown.
   - **Files:** `e2e/happy.spec.ts`, `e2e/drag-failure.spec.ts`, `playwright.config.ts`.
-- [ ] **S7.2 DoD sweep + docs** *(est. 1h)*
+- [x] **S7.2 DoD sweep + docs** *(est. 1h)*
   - **Goal:** Walk §13 checkboxes 1–10 literally on a clean clone (`git clone` → `docker compose up --build`); README testing section; confirm no secret/seed/env committed (§11, §9); ARCHITECTURE.md/DATA_MODEL.md drift check.
   - **Acceptance:** every §13 box demonstrably checkable by QA on a clean laptop.
 

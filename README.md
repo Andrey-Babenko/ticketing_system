@@ -102,6 +102,30 @@ npx prisma studio                   # browse the DB in a GUI
 docker compose --profile angular up --build -d frontend-angular   # → http://localhost:8081
 ```
 
+## Automated tests
+
+```bash
+# Backend unit/integration tests (real Postgres, not mocked) — needs db up
+docker compose up -d db
+cd backend && npm install && npm test
+
+# Frontend unit tests (pure functions: board filters, optimistic drag update)
+cd frontend && npm install && npm test
+
+# End-to-end (Playwright) — drives the real UI against the compose stack on :8080,
+# including fetching the verification email from Mailpit's REST API and a real
+# drag-and-drop. Host Node is fine here (spec §2 governs app startup, not tooling).
+docker compose up --build -d      # full stack must be up first
+npm install                       # root package.json
+npx playwright install chromium   # one-time browser download
+npx playwright test
+```
+
+§11's "at least one backend business flow and one frontend or API flow" is covered by
+`backend/test/auth.session.test.ts` (signup → verify → login → me → logout → 401) and
+`e2e/happy.spec.ts` (the same flow driven through the real browser, plus teams, epics,
+tickets, drag-and-drop, and comments).
+
 ## Manual testing / verification
 
 Run from the repo root while the stack is up.
@@ -133,18 +157,25 @@ docker compose exec db psql -U app -d ticketing -c '\dt'   # "Did not find any r
 ```
 .
 ├── backend/            # Express + Prisma API (TypeScript, ESM)
-│   ├── prisma/         # schema.prisma (+ migrations, later)
-│   ├── src/            # app.ts (routes), index.ts (bootstrap)
+│   ├── prisma/         # schema.prisma + migrations
+│   ├── src/            # routes/, middleware/, lib/, app.ts, index.ts
+│   ├── test/           # vitest — real Postgres, no mocks
 │   └── Dockerfile
 ├── frontend/           # Vite + React SPA (TypeScript)
+│   ├── src/            # pages/, components/, api/, lib/
 │   ├── nginx.conf      # SPA fallback + /api proxy
 │   └── Dockerfile      # multi-stage: node build → nginx
 ├── frontend-angular/   # Angular twin — placeholder stub (stretch)
+├── e2e/                # Playwright — drives the compose stack on :8080
 ├── docs/
 │   ├── spec.md         # requirements (source of truth)
-│   ├── PLAN.md         # task list (to be created)
-│   └── openapi.yaml    # API contract (to be created)
+│   ├── PLAN.md         # task list, checked off per slice
+│   ├── DECISIONS.md    # ADRs for anything spec.md leaves open
+│   ├── ARCHITECTURE.md # topology/ports/env + auth flow diagram
+│   ├── DATA_MODEL.md   # Prisma schema draft + integrity rules
+│   └── openapi.yaml    # API contract both frontends conform to
 ├── docker-compose.yml
+├── package.json         # root — Playwright only
 └── .env.example
 ```
 
