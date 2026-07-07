@@ -1,14 +1,28 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTeams } from "../api/teams";
 import { useEpics } from "../api/epics";
-import { useTickets } from "../api/tickets";
+import { useTickets, updateTicket, ticketsKey, ticketKey } from "../api/tickets";
+import type { Ticket } from "../api/tickets";
+import { ApiError } from "../api/client";
 import { filterTickets, groupByState } from "../lib/boardFilters";
 import type { Filters } from "../lib/boardFilters";
+import { applyOptimisticMove } from "../lib/boardDnd";
 import { STATE_ORDER } from "../lib/labels";
+import type { TicketState } from "../lib/labels";
 import Column from "../components/Column";
-import TicketCard from "../components/TicketCard";
+import TicketCard, { TicketCardBody } from "../components/TicketCard";
 import FilterBar from "../components/FilterBar";
+import Toast from "../components/Toast";
 
 // Same non-coercing canonical-id guard as TicketDetail (review finding there):
 // '/board/1e2' must not silently resolve to team 1.
@@ -51,6 +65,44 @@ export default function Board() {
   return <BoardForTeam teamId={team.id} filters={filters} onFiltersChange={setFilters} />;
 }
 
+// Board-local: the drag mutation is intentionally NOT invalidateAfterTicketWrite
+// (tickets.ts's shared helper). A state-only move changes no Team/Epic counts, and
+// invalidating those lists would refetch the mounted Teams/Epics selectors on every
+// drag for no visible reason. onError distinguishes a 404 (ticket deleted elsewhere —
+// refetch, never resurrect, ADR-10) from any other failure (snapshot revert, §8).
+function useMoveTicket(teamId: number, onFailure: (message: string) => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, state }: { id: number; state: TicketState }) => updateTicket(id, { state }),
+    onMutate: async ({ id, state }) => {
+      await queryClient.cancelQueries({ queryKey: ticketsKey(teamId) });
+      const previous = queryClient.getQueryData<Ticket[]>(ticketsKey(teamId));
+      if (previous) {
+        queryClient.setQueryData(
+          ticketsKey(teamId),
+          applyOptimisticMove(previous, id, state, new Date().toISOString())
+        );
+      }
+      return { previous };
+    },
+    onError: (err, _vars, context) => {
+      if (err instanceof ApiError && err.status === 404) {
+        queryClient.invalidateQueries({ queryKey: ticketsKey(teamId) });
+        onFailure("This ticket was deleted.");
+        return;
+      }
+      if (context?.previous) queryClient.setQueryData(ticketsKey(teamId), context.previous);
+      onFailure("Couldn't move the ticket — try again.");
+    },
+    onSuccess: (saved) => {
+      queryClient.setQueryData(ticketKey(saved.id), saved);
+      queryClient.setQueryData<Ticket[]>(ticketsKey(teamId), (old) =>
+        old?.map((t) => (t.id === saved.id ? saved : t))
+      );
+    },
+  });
+}
+
 function BoardForTeam({
   teamId,
   filters,
@@ -65,11 +117,57 @@ function BoardForTeam({
   const { data: epics } = useEpics(teamId);
   const { data: tickets, isPending, isError } = useTickets(teamId);
 
+  const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(new Set());
+  const [toast, setToast] = useState<string | null>(null);
+  // A drag's pointerup can still fire the dragged card's onClick; Board sets this for
+  // one tick so TicketCard can suppress that one navigation (not a re-render — read at
+  // click-time, not render-time).
+  const justDraggedRef = useRef<number | null>(null);
+
+  const moveTicket = useMoveTicket(teamId, setToast);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
   const epicName = (epicId: number | null) =>
     epicId === null ? undefined : epics?.find((e) => e.id === epicId)?.title;
 
   const filtered = tickets ? filterTickets(tickets, filters) : [];
   const groups = groupByState(filtered);
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveTicket(tickets?.find((t) => t.id === event.active.id) ?? null);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveTicket(null);
+    const { active, over } = event;
+    if (!over) return; // dropped outside any column — §8/ADR-10 no-op
+
+    const ticketId = active.id as number;
+    const newState = over.id as TicketState;
+    const ticket = tickets?.find((t) => t.id === ticketId);
+    if (!ticket || ticket.state === newState) return; // same-column drop — no API call
+
+    justDraggedRef.current = ticketId;
+    setTimeout(() => {
+      justDraggedRef.current = null;
+    }, 0);
+
+    setPendingIds((prev) => new Set(prev).add(ticketId));
+    moveTicket.mutate(
+      { id: ticketId, state: newState },
+      {
+        onSettled: () =>
+          setPendingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(ticketId);
+            return next;
+          }),
+      }
+    );
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -109,16 +207,33 @@ function BoardForTeam({
           No tickets yet — create the first one above.
         </p>
       ) : (
-        <div className="flex flex-1 gap-3 overflow-x-auto pb-2">
-          {STATE_ORDER.map((state) => (
-            <Column key={state} state={state} count={groups[state].length}>
-              {groups[state].map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} epicName={epicName(ticket.epicId)} />
-              ))}
-            </Column>
-          ))}
-        </div>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="flex flex-1 gap-3 overflow-x-auto pb-2">
+            {STATE_ORDER.map((state) => (
+              <Column key={state} state={state} count={groups[state].length}>
+                {groups[state].map((ticket) => (
+                  <TicketCard
+                    key={ticket.id}
+                    ticket={ticket}
+                    epicName={epicName(ticket.epicId)}
+                    disabled={pendingIds.has(ticket.id)}
+                    justDraggedRef={justDraggedRef}
+                  />
+                ))}
+              </Column>
+            ))}
+          </div>
+          <DragOverlay>
+            {activeTicket && (
+              <div className="w-64 rounded border border-blue-300 bg-white p-3 shadow-lg">
+                <TicketCardBody ticket={activeTicket} epicName={epicName(activeTicket.epicId)} />
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
       )}
+
+      {toast && <Toast message={toast} onDismiss={() => setToast(null)} />}
     </div>
   );
 }

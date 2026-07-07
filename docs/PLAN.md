@@ -107,7 +107,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §8: columns exactly five; ordering modified-desc, tie-break id desc; usable at 100 tickets (manual check with QA-created data); counts = visible set.
   - **Tests first:** unit — pure filter/sort functions (AND logic, CI substring, tie-break).
   - **Files:** `frontend/src/pages/Board.tsx`, `frontend/src/components/{Column,TicketCard,FilterBar}.tsx`, `frontend/src/lib/boardFilters.ts` (+ tests).
-- [ ] **S6.2 Drag-and-drop** *(est. 3h)*
+- [x] **S6.2 Drag-and-drop** *(est. 3h)*
   - **Goal:** ADR-10/11/14: dnd-kit draggable cards / droppable columns / DragOverlay; drop → optimistic top-of-destination + `PATCH {state}` via TanStack onMutate/onError/onSettled; failure → snapshot revert + toast; 404 → toast + invalidate; in-flight card undraggable; same-column drop = no-op.
   - **Acceptance:** §6 immediate persistence; §8 revert + error on failure; §13 board matches post-refresh truth after any drag.
   - **Tests first:** unit — optimistic cache updater + rollback function; (E2E failure-path in S7).
