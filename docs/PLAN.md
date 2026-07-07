@@ -91,11 +91,11 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
   - **Acceptance:** §6 field table exactly; cross-team epic → 400 (never 409); drag payload `{state}` alone works; state accepted on create (any of five, default new).
   - **Tests first:** supertest — the full §6 matrix: each invalid enum, dangling team/epic, cross-team epic on create AND on team-change PATCH, no-op PATCH leaves modified_at identical, real PATCH bumps it, comment-add leaves it (with S5.3), delete removes comments.
   - **Files:** `backend/src/routes/tickets.ts`, `backend/src/validation/tickets.ts`, `backend/test/tickets.test.ts`.
-- [ ] **S5.2 Ticket detail/create UI** *(est. 2h)*
+- [x] **S5.2 Ticket detail/create UI** *(est. 2h)*
   - **Goal:** Wireframe-3: metadata line (#id, created by/at, modified at — absolute UTC), Team/Type/State/Epic dropdowns (human labels §6; epic list scoped to selected team; team change resets epic to None §6), Title, Body (plain text, pre-wrap), Save (stays on page, updates stamps), Delete (confirm → board); /tickets/new variant (team pre-filled from board, state=new, no metadata/comments).
   - **Acceptance:** §6, §10, wireframe-3 implied items; epic dropdown never shows another team's epics.
   - **Files:** `frontend/src/pages/TicketDetail.tsx`, `frontend/src/api/tickets.ts`, `frontend/src/lib/labels.ts` (enum↔label mapping, ADR spec-analysis).
-- [ ] **S5.3 Comments API + panel** *(est. 1h)*
+- [x] **S5.3 Comments API + panel** *(est. 1h)*
   - **Goal:** `GET/POST /api/tickets/:id/comments` — non-empty body, author=session user, oldest-first (created asc, id asc); immutable (§7). Panel: count, list (author email + timestamp), add box; posting refreshes list only, never the ticket form or modified_at (§7).
   - **Tests first:** supertest — comment add leaves ticket modified_at byte-identical (§7 — the subtle one); ordering; empty body → 400.
   - **Files:** `backend/src/routes/comments.ts`, `backend/test/comments.test.ts`, `frontend/src/components/CommentsPanel.tsx`.

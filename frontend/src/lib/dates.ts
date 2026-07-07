@@ -1,3 +1,20 @@
+// Absolute UTC for the ticket detail view and comments (wireframe 3: "Jun 23, 12:40 UTC").
+export function formatUtc(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return (
+    d.toLocaleString("en-US", {
+      timeZone: "UTC",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      ...(d.getUTCFullYear() !== new Date().getUTCFullYear() && { year: "numeric" }),
+    }) + " UTC"
+  );
+}
+
 // Friendly relative form for tables and board cards (wireframes 1/4).
 // Browser-local clock by design (spec-analysis); detail views show absolute UTC instead.
 export function formatRelative(iso: string): string {

@@ -70,6 +70,35 @@ export function TextArea({ label, hint, error, ...textareaProps }: TextAreaProps
   );
 }
 
+interface SelectProps extends ComponentPropsWithRef<"select"> {
+  label: string;
+  error?: string;
+}
+
+export function Select({ label, error, children, ...selectProps }: SelectProps) {
+  const id = useId();
+  return (
+    <div className="mb-3">
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-gray-700">
+        {label}
+      </label>
+      <select
+        id={id}
+        aria-invalid={error ? true : undefined}
+        className={`w-full rounded border bg-white px-3 py-2 text-sm outline-none focus:ring-2 ${
+          error
+            ? "border-red-400 focus:ring-red-200"
+            : "border-gray-300 focus:border-blue-400 focus:ring-blue-100"
+        }`}
+        {...selectProps}
+      >
+        {children}
+      </select>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  );
+}
+
 const BUTTON_VARIANTS = {
   primary: "bg-blue-600 text-white hover:bg-blue-700",
   danger: "bg-red-600 text-white hover:bg-red-700",
@@ -84,6 +113,7 @@ interface ButtonProps {
   type?: "submit" | "button";
   variant?: keyof typeof BUTTON_VARIANTS;
   fullWidth?: boolean;
+  form?: string;
   onClick?: () => void;
 }
 
@@ -95,12 +125,14 @@ export function Button({
   type = "submit",
   variant = "primary",
   fullWidth,
+  form,
   onClick,
 }: ButtonProps) {
   return (
     <button
       ref={ref}
       type={type}
+      form={form}
       onClick={onClick}
       disabled={pending}
       className={`rounded text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 ${

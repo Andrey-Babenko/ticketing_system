@@ -7,7 +7,6 @@ import Verify from "./pages/Verify";
 import Board from "./pages/Board";
 import Teams from "./pages/Teams";
 import Epics from "./pages/Epics";
-import TicketNew from "./pages/TicketNew";
 import TicketDetail from "./pages/TicketDetail";
 
 // Auth screens render outside Layout — no Board/Teams/Epics tabs on wireframe 2.
@@ -25,7 +24,7 @@ export const router = createBrowserRouter([
       { path: "/board/:teamId", element: <Board /> },
       { path: "/teams", element: <Teams /> },
       { path: "/epics", element: <Epics /> },
-      { path: "/tickets/new", element: <TicketNew /> },
+      { path: "/tickets/new", element: <TicketDetail create /> },
       { path: "/tickets/:id", element: <TicketDetail /> },
     ],
   },
