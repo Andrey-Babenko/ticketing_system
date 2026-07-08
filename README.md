@@ -133,13 +133,15 @@ docker compose --profile angular up --build -d      # + Angular twin (ADR-18)
 npm install                                         # root package.json
 npx playwright install chromium                     # one-time browser download
 npx playwright test
+# Or scope to one frontend: npm run test:e2e:react / npm run test:e2e:angular
 ```
 
 The same 4 specs run as **two Playwright projects** — `chromium` against the React app
 on :8080, `angular` against the twin on :8081 — for 8 spec-runs total. Both compose
 profiles must be up; global setup pings all three origins (app, twin, Mailpit) up front
-and fails fast with the exact command to run if one isn't reachable. Pass
-`--project=chromium` or `--project=angular` to run just one side while iterating.
+and fails fast with the exact command to run if one isn't reachable. Run just one side
+while iterating with `npm run test:e2e:react` / `npm run test:e2e:angular` (or the
+underlying `--project=chromium` / `--project=angular` flag directly).
 
 §11's "at least one backend business flow and one frontend or API flow" is covered by
 `backend/test/auth.session.test.ts` (signup → verify → login → me → logout → 401) and

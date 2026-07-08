@@ -29,7 +29,7 @@ Prisma is pinned to v6 (v7 is a breaking rearchitecture — install with `@6`).
 
 ## Services & ports
 frontend nginx 8080 (serves SPA, proxies /api → backend:3000), backend 3000,
-postgres 5432 (app/app/ticketing), mailpit 8025 UI + 1025 SMTP, angular stub 8081 (profile "angular").
+postgres 5432 (app/app/ticketing), mailpit 8025 UI + 1025 SMTP, angular twin 8081 (profile "angular", full parity, ADR-18).
 
 ## Commands
 - Full stack (prod): docker compose up --build        (open http://localhost:8080; no hot reload)
@@ -38,7 +38,9 @@ postgres 5432 (app/app/ticketing), mailpit 8025 UI + 1025 SMTP, angular stub 808
 - Backend dev:       cd backend && npm run dev         (tsx watch on :3000; needs db+mailpit)
 - Dev infra:         docker compose up -d db mailpit backend  (then run frontend/backend on host as needed)
 - Backend tests:     cd backend && npm test
-- E2E:               npx playwright test
+- E2E (both):         npm run test:e2e            (or: npx playwright test)
+- E2E (React only):   npm run test:e2e:react
+- E2E (Angular only): npm run test:e2e:angular    (needs the angular compose profile up)
 - New migration:     cd backend && npx prisma migrate dev --name <name>
 
 Dev mode (hot reload): run infra in Docker, apps on the host. Vite (:5173) proxies /api to the
