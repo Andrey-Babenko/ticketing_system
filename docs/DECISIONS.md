@@ -297,3 +297,57 @@ Superseding a decision = new ADR + status update here, not silent editing.
   full mail round-trip (request → Mailpit → reset → old password dead, new one
   works); session revocation is covered by a supertest case and a manual check
   (second live session dies immediately after reset).
+
+## ADR-18: Angular twin — generated client, signals, Material/CDK, shared E2E oracle
+
+- **Status:** accepted · 2026-07-08
+- **Context:** PLAN.md's S8.2 ("Angular twin consuming openapi.yaml") was promoted to
+  its own Slice 9 — a whole second frontend is a different scale of work than the
+  other §14 stretches, and by the time it's picked up the React app has grown three
+  shipped stretch features (S8.1 comment edit/delete, S8.3 virtualization, S8.4
+  password reset) beyond the mandatory §13 scope. Every structural choice below was
+  a real decision, made in a brainstorming session before the Slice 9 subtasks were
+  written.
+- **Decision:**
+  - **Full parity** with the React app — mandatory §13 scope plus all three shipped
+    stretches, not just the DoD checklist. Chosen over mandatory-only or
+    board-plus-auth-only: a twin that QA can't create data through, or that silently
+    lags the app it's supposed to mirror, undersells the "twin" premise.
+  - **Generated API client** from `docs/openapi.yaml` via **ng-openapi-gen** (a
+    pure-Node Angular generator) rather than hand-written services or the Java-based
+    `openapi-generator-cli`. This is what makes "consuming openapi.yaml" literally
+    true instead of aspirational: contract drift breaks the twin's compile, giving
+    CLAUDE.md's "change it deliberately" rule real teeth. No JVM in the Docker build.
+  - **Signals + plain services**, no NgRx, no TanStack Angular adapter — ADR-14
+    already anticipated "the stretch Angular twin uses its own idioms regardless."
+    ADR-10's optimistic-move/targeted-revert board semantics are implemented on a
+    plain tickets signal with a captured-previous-value restore on failure; the
+    handful of cache behaviors TanStack gives React for free (per-team caching,
+    request dedupe) are hand-rolled at this app's small scale.
+  - **Board: CDK drag-drop + CDK virtual scroll, fixed-height cards.** `cdkDropList`
+    connected columns with the drop INDEX ignored — the same move ADR-11 made for
+    dnd-kit (drop means "card X onto column Y"; in-column order stays computed by
+    `modifiedAt`, never a manual position). Cards are fixed-height and line-clamped
+    so virtualization can use CDK's stable, first-party fixed-size strategy;
+    variable-height virtualization only exists in `cdk-experimental`, rejected as
+    unstable and poorly-documented in combination with drag-drop. Accepted trade:
+    the twin's cards don't wrap descriptions exactly like React's.
+  - **Angular Material** for styling, not a Tailwind port — the ecosystem-native
+    look, chosen over pixel parity. The resulting visual divergence from React is
+    accepted; what's NOT allowed to diverge is the semantic layer the E2E suite
+    depends on — field labels, button/heading accessible names, dialog roles
+    (`MatDialog` as `role="alertdialog"` for confirms), and the existing
+    `data-testid` contract (`card-<id>`, `column-<state>`, `column-scroll-<state>`,
+    `drag-overlay` on the `cdkDragPreview` template).
+  - **Verification: the same Playwright suite, run as a second project** — add an
+    `angular` project to `playwright.config.ts` with `baseURL http://localhost:8081`.
+    The 4 existing specs (happy path, drag-failure, virtualization, password-reset)
+    become the twin's acceptance oracle instead of a hand-written parallel spec.
+    Selector friction while wiring this up IS a real UX divergence surfacing, to be
+    fixed on the twin's markup, not papered over with forked specs.
+- **Consequences:** One behavioral spec, two independently-built implementations —
+  the strongest parity check available. `docs/PLAN.md`'s Slice 9 breaks the work into
+  7 subtasks (scaffold/client/Docker → auth → teams/epics → tickets/comments →
+  board+virtual-scroll → drag-drop → E2E-parity+docs), each proceeding through the
+  normal TDD/verification cycle. Cost: this is the single largest slice in the
+  project (~19h estimated) for a feature §14 lists as optional.

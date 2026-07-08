@@ -125,9 +125,60 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 ## Slice 8 — Stretch (only after §13 is fully green, §14)
 
 - [x] S8.1 Edit/delete own comments (§7/§14 — lowest-risk stretch)
-- [ ] S8.2 Angular twin consuming openapi.yaml (frontend-angular/, compose profile exists)
 - [x] S8.3 Virtualized board rendering (§14)
 - [x] S8.4 Password reset flow (§14)
+
+## Slice 9 — Angular twin (est. ~19h) — post-DoD stretch, ADR-18
+
+Full-parity second frontend consuming docs/openapi.yaml via a GENERATED client
+(ng-openapi-gen), Angular 20 + signals + Material + CDK (ADR-18). Acceptance oracle:
+the existing Playwright suite runs against :8081 as a second project. Promoted from
+S8.2 by explicit decision — not a silent reorder.
+
+- [ ] **S9.1 Scaffold, generated client, Docker/compose** *(est. 2.5h)*
+  - **Goal:** Angular 20 standalone app in frontend-angular/ (replacing the stub);
+    Material + CDK; `npm run generate:api` → ng-openapi-gen emits typed services/models
+    from ../docs/openapi.yaml into src/app/api/ (committed); multi-stage Dockerfile +
+    nginx.conf mirroring frontend/ (SPA fallback, /api proxy); compose profile gains
+    depends_on backend.
+  - **Acceptance:** `docker compose --profile angular up --build -d` serves the shell
+    at :8081; deep-route refresh works; /api/health reachable through :8081; generated
+    client compiles; regenerating after a yaml edit shows a diff.
+  - **Files:** frontend-angular/* (fresh), docker-compose.yml.
+- [ ] **S9.2 Auth screens + session plumbing** *(est. 3h)*
+  - **Goal:** login (+resend prompt on 403 EMAIL_NOT_VERIFIED), signup, verify,
+    forgot-/reset-password (S8.4 parity); functional guards (RequireAuth /
+    RedirectIfAuthed equivalents); 401 interceptor → /login; auth state as a signal
+    service over the generated AuthService.
+  - **Acceptance:** §3/§10 flows work through :8081; labels/headings/button names
+    match the React app's accessible names (E2E compatibility, ADR-18).
+- [ ] **S9.3 Teams + Epics screens** *(est. 3h)*
+  - **Goal:** wireframe-4/5 parity: tables with counts, create/rename dialogs
+    (role-correct MatDialog), delete disabled while referenced + 409 handling,
+    ?team= URL state on epics.
+  - **Acceptance:** §4/§5 flows through :8081; happy.spec.ts team/epic steps pass.
+- [ ] **S9.4 Ticket detail/create + comments** *(est. 3h)*
+  - **Goal:** wireframe-3 parity incl. team-change-clears-epic (§6), metadata line,
+    confirm-delete (alertdialog); comments panel with add + edit/delete own
+    (S8.1 parity, "(edited)" marker, ownership-gated controls).
+  - **Acceptance:** §6/§7 flows through :8081; comment steps of happy.spec.ts pass.
+- [ ] **S9.5 Board rendering, filters, virtual scroll** *(est. 3h)*
+  - **Goal:** 5 columns, fixed-height cards in cdk-virtual-scroll-viewport per column
+    (S8.3 parity; testids column-STATE / column-scroll-STATE / card-N), client-side
+    AND filters + counts (port boardFilters.ts pure functions), empty states.
+  - **Acceptance:** virtualization.spec.ts passes against :8081 (bounded DOM at 300).
+- [ ] **S9.6 Board drag-and-drop** *(est. 3h)*
+  - **Goal:** cdkDropList connected columns, drop index ignored (ADR-11/18);
+    optimistic move + targeted revert on failure + MatSnackBar error (role=alert);
+    404 → refetch; in-flight card locked; cdkDragPreview carries
+    data-testid="drag-overlay".
+  - **Acceptance:** happy.spec.ts drag steps + drag-failure.spec.ts pass on :8081.
+- [ ] **S9.7 E2E parity project + docs + DoD sweep** *(est. 2h)*
+  - **Goal:** playwright.config.ts `angular` project (baseURL :8081, webServer note:
+    profile must be up); reconcile residual selector divergences twin-side; README
+    (run/test instructions), ARCHITECTURE.md (twin no longer a stub), PLAN checkboxes.
+  - **Acceptance:** `npx playwright test` green on BOTH projects (8 spec-runs) from
+    a clean `docker compose --profile angular up --build`.
 
 ---
 
