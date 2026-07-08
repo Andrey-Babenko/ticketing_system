@@ -167,7 +167,7 @@ S8.2 by explicit decision — not a silent reorder.
     (S8.3 parity; testids column-STATE / column-scroll-STATE / card-N), client-side
     AND filters + counts (port boardFilters.ts pure functions), empty states.
   - **Acceptance:** virtualization.spec.ts passes against :8081 (bounded DOM at 300).
-- [ ] **S9.6 Board drag-and-drop** *(est. 3h)*
+- [x] **S9.6 Board drag-and-drop** *(est. 3h)*
   - **Goal:** cdkDropList connected columns, drop index ignored (ADR-11/18);
     optimistic move + targeted revert on failure + MatSnackBar error (role=alert);
     404 → refetch; in-flight card locked; cdkDragPreview carries

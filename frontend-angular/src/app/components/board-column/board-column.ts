@@ -1,5 +1,6 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CdkDragDrop, DragDropModule } from '@angular/cdk/drag-drop';
 import { TicketCard } from '../ticket-card/ticket-card';
 import { STATE_LABELS, TicketState } from '../../lib/labels';
 import { Ticket } from '../../api/models/ticket';
@@ -7,11 +8,12 @@ import { Epic } from '../../api/models/epic';
 
 // S8.3/ADR-16: CDK's fixed-size virtual scroll windows the card list so DOM size stays
 // bounded regardless of ticket count (verified at 1,000/team). `column-<state>` is the
-// whole column shell (header + cards), the sole droppable region in S9.6; the inner
+// whole column shell (header + cards) AND the sole droppable region (ADR-11/18: drop
+// means "card X onto column Y", the drop index is ignored); the inner
 // `column-scroll-<state>` viewport is the actual scrollable element tests scroll.
 @Component({
   selector: 'app-board-column',
-  imports: [ScrollingModule, TicketCard],
+  imports: [ScrollingModule, DragDropModule, TicketCard],
   templateUrl: './board-column.html',
   styleUrl: './board-column.scss',
 })
@@ -19,6 +21,9 @@ export class BoardColumn {
   readonly state = input.required<TicketState>();
   readonly tickets = input.required<Ticket[]>();
   readonly epics = input<Epic[]>([]);
+  readonly pendingIds = input<ReadonlySet<number>>(new Set());
+
+  readonly dropped = output<CdkDragDrop<TicketState, TicketState, Ticket>>();
 
   readonly STATE_LABELS = STATE_LABELS;
 

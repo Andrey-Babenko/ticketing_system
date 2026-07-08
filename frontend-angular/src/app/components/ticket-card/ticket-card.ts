@@ -1,5 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 import { TYPE_LABELS } from '../../lib/labels';
 import { formatRelative } from '../../lib/dates';
 import { Ticket } from '../../api/models/ticket';
@@ -7,13 +8,15 @@ import { Epic } from '../../api/models/epic';
 
 @Component({
   selector: 'app-ticket-card',
-  imports: [RouterLink],
+  imports: [RouterLink, DragDropModule],
   templateUrl: './ticket-card.html',
   styleUrl: './ticket-card.scss',
 })
 export class TicketCard {
   readonly ticket = input.required<Ticket>();
   readonly epics = input<Epic[]>([]);
+  // True while this ticket's own drag-move PATCH is in flight (ADR-10).
+  readonly pending = input<boolean>(false);
 
   readonly TYPE_LABELS = TYPE_LABELS;
   readonly formatRelative = formatRelative;

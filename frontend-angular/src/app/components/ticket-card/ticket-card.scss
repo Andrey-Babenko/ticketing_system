@@ -19,6 +19,23 @@
   border-color: var(--mat-sys-primary);
 }
 
+.ticket-card.pending {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.ticket-card.cdk-drag-preview {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.ticket-card.cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+.drag-preview {
+  width: 16rem;
+}
+
 .type-badge {
   display: inline-block;
   padding: 0.1rem 0.35rem;

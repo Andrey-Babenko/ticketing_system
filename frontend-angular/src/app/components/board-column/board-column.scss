@@ -46,3 +46,8 @@
   height: 100px;
   padding-bottom: 0.5rem;
 }
+
+.board-column.cdk-drop-list-receiving {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -2px;
+}

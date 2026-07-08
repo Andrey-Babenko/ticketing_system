@@ -34,9 +34,15 @@
     } @else if (tickets()!.length === 0) {
       <p class="empty-state dashed">No tickets yet — create the first one above.</p>
     } @else {
-      <div class="board-columns">
+      <div class="board-columns" cdkDropListGroup>
         @for (state of STATE_ORDER; track state) {
-          <app-board-column [state]="state" [tickets]="groups()[state]" [epics]="epics() ?? []" />
+          <app-board-column
+            [state]="state"
+            [tickets]="groups()[state]"
+            [epics]="epics() ?? []"
+            [pendingIds]="pendingIds()"
+            (dropped)="onDropped($event)"
+          />
         }
       </div>
     }

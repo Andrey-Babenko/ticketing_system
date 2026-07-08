@@ -5,6 +5,8 @@ import { TicketCreate } from '../api/models/ticket-create';
 import { TicketUpdate } from '../api/models/ticket-update';
 import { TeamsStore } from './teams.service';
 import { EpicsStore } from './epics.service';
+import { applyOptimisticMove } from '../lib/board-dnd';
+import { TicketState } from '../lib/labels';
 
 interface Entry {
   tickets: WritableSignal<Ticket[] | undefined>;
@@ -64,6 +66,29 @@ export class TicketsStore {
     const ticket = await this.api.updateTicket({ id, body: data });
     await this.afterWrite(ticket, previousTeamId);
     return ticket;
+  }
+
+  // Client-side-only state flip for a drag (ADR-10) — returns the pre-move ticket so
+  // the caller can revert precisely if the follow-up PATCH fails. Does NOT touch
+  // Team/Epic caches: a state-only move changes no counts.
+  optimisticMove(teamId: number, ticketId: number, newState: TicketState, now: string): Ticket | undefined {
+    const entry = this.entry(teamId);
+    const current = entry.tickets();
+    if (!current) return undefined;
+    const previous = current.find((t) => t.id === ticketId);
+    entry.tickets.set(applyOptimisticMove(current, ticketId, newState, now));
+    return previous;
+  }
+
+  // Targeted write of a single ticket into the cache — used both to apply the
+  // server's authoritative result on success and to revert on failure. Re-reads the
+  // CURRENT list at call time so it never clobbers a different ticket's concurrent move.
+  setTicketInCache(teamId: number, ticket: Ticket): void {
+    this.entry(teamId).tickets.update((list) => list?.map((t) => (t.id === ticket.id ? ticket : t)));
+  }
+
+  moveState(id: number, state: TicketState): Promise<Ticket> {
+    return this.api.updateTicket({ id, body: { state } });
   }
 
   async remove(ticket: Ticket): Promise<void> {
