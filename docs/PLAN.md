@@ -173,7 +173,7 @@ S8.2 by explicit decision — not a silent reorder.
     404 → refetch; in-flight card locked; cdkDragPreview carries
     data-testid="drag-overlay".
   - **Acceptance:** happy.spec.ts drag steps + drag-failure.spec.ts pass on :8081.
-- [ ] **S9.7 E2E parity project + docs + DoD sweep** *(est. 2h)*
+- [x] **S9.7 E2E parity project + docs + DoD sweep** *(est. 2h)*
   - **Goal:** playwright.config.ts `angular` project (baseURL :8081, webServer note:
     profile must be up); reconcile residual selector divergences twin-side; README
     (run/test instructions), ARCHITECTURE.md (twin no longer a stub), PLAN checkboxes.

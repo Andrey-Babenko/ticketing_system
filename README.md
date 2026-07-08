@@ -16,8 +16,10 @@ Three logical tiers, each in its own container:
 | Application   | Express + Prisma + Zod API (TypeScript)   | `backend/`         |
 | Persistence   | PostgreSQL                                | (db container)     |
 
-Supporting services: **Mailpit** captures outgoing email in dev. An **Angular** twin
-(`frontend-angular/`) is a stretch goal, currently a placeholder behind a compose profile.
+Supporting services: **Mailpit** captures outgoing email in dev. An **Angular 20** twin
+(`frontend-angular/`, behind the `angular` compose profile) is a full-parity second
+frontend (stretch, ADR-18) consuming `docs/openapi.yaml` via a generated client
+(ng-openapi-gen) — same backend, same Playwright suite as its acceptance oracle.
 
 In production compose, the `frontend` service is **nginx**: it serves the built SPA and
 reverse-proxies `/api/*` to the backend, so the browser only ever talks to one origin.
@@ -31,7 +33,7 @@ reverse-proxies `/api/*` to the backend, so the browser only ever talks to one o
 | PostgreSQL         | localhost:5432            | user `app` / pass `app` / db `ticketing` |
 | Mailpit web UI     | http://localhost:8025     | View captured emails                   |
 | Mailpit SMTP       | localhost:1025            | Backend sends mail here in dev         |
-| Angular stub       | http://localhost:8081     | Only with `--profile angular`          |
+| Angular twin       | http://localhost:8081     | Only with `--profile angular`          |
 
 ## Quick start
 
@@ -97,9 +99,20 @@ npx prisma studio                   # browse the DB in a GUI
 > **Note:** Prisma is pinned to **v6**. v7 is a breaking rearchitecture (config file + driver
 > adapters, no `url` in `schema.prisma`). Install Prisma packages with `@6`.
 
-### Angular stub (stretch)
+### Angular twin (stretch, ADR-18)
 ```bash
 docker compose --profile angular up --build -d frontend-angular   # → http://localhost:8081
+```
+
+The twin consumes `docs/openapi.yaml` through a **generated** client (not hand-written
+services) — that's what makes "consuming openapi.yaml" literally true instead of
+aspirational. Regenerate it after any contract change:
+```bash
+cd frontend-angular
+npm install
+npm run generate:api          # ng-openapi-gen → src/app/api/ (committed, diff it before committing)
+npm test                      # Vitest — pure functions (board filters, optimistic drag update)
+npm start                     # → http://localhost:4200, proxies /api to a host backend on :3000
 ```
 
 ## Automated tests
@@ -112,14 +125,21 @@ cd backend && npm install && npm test
 # Frontend unit tests (pure functions: board filters, optimistic drag update)
 cd frontend && npm install && npm test
 
-# End-to-end (Playwright) — drives the real UI against the compose stack on :8080,
-# including fetching the verification email from Mailpit's REST API and a real
-# drag-and-drop. Host Node is fine here (spec §2 governs app startup, not tooling).
-docker compose up --build -d      # full stack must be up first
-npm install                       # root package.json
-npx playwright install chromium   # one-time browser download
+# End-to-end (Playwright) — drives the real UI against the compose stack, including
+# fetching the verification email from Mailpit's REST API and a real drag-and-drop.
+# Host Node is fine here (spec §2 governs app startup, not tooling).
+docker compose up --build -d                        # React frontend + backend
+docker compose --profile angular up --build -d      # + Angular twin (ADR-18)
+npm install                                         # root package.json
+npx playwright install chromium                     # one-time browser download
 npx playwright test
 ```
+
+The same 4 specs run as **two Playwright projects** — `chromium` against the React app
+on :8080, `angular` against the twin on :8081 — for 8 spec-runs total. Both compose
+profiles must be up; global setup pings all three origins (app, twin, Mailpit) up front
+and fails fast with the exact command to run if one isn't reachable. Pass
+`--project=chromium` or `--project=angular` to run just one side while iterating.
 
 §11's "at least one backend business flow and one frontend or API flow" is covered by
 `backend/test/auth.session.test.ts` (signup → verify → login → me → logout → 401) and
@@ -225,8 +245,11 @@ with session A's cookie → `401`.
 │   ├── src/            # pages/, components/, api/, lib/
 │   ├── nginx.conf      # SPA fallback + /api proxy
 │   └── Dockerfile      # multi-stage: node build → nginx
-├── frontend-angular/   # Angular twin — placeholder stub (stretch)
-├── e2e/                # Playwright — drives the compose stack on :8080
+├── frontend-angular/   # Angular 20 twin — full parity (stretch, ADR-18)
+│   ├── src/app/        # pages/, components/, core/, lib/, api/ (generated, committed)
+│   ├── nginx.conf      # SPA fallback + /api proxy (mirrors frontend/)
+│   └── Dockerfile      # multi-stage: node build → nginx
+├── e2e/                # Playwright — drives BOTH compose stacks (:8080 and :8081)
 ├── docs/
 │   ├── spec.md         # requirements (source of truth)
 │   ├── PLAN.md         # task list, checked off per slice

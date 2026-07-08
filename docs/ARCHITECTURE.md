@@ -7,7 +7,7 @@ Three-tier SPA per spec §2, decided in [DECISIONS.md](DECISIONS.md) (ADR number
 | Tier | Container | Image / build | Host port | Role |
 |---|---|---|---|---|
 | Presentation | `frontend` | multi-stage: node build → nginx:alpine | **8080** | Serves built React SPA; proxies `/api/*` → `backend:3000` (ADR-1) |
-| Presentation (stretch) | `frontend-angular` | nginx:alpine (profile `angular`) | 8081 | Angular twin placeholder, generated later against [openapi.yaml](openapi.yaml) |
+| Presentation (stretch) | `frontend-angular` | multi-stage: node build → nginx:alpine (profile `angular`) | 8081 | Angular 20 twin, full parity (ADR-18); generated client from [openapi.yaml](openapi.yaml) via ng-openapi-gen |
 | Application | `backend` | node:22-slim, Express + Prisma 6 (ADR-2) | 3000 | HTTP API under `/api`; runs `migrate deploy` on boot behind bounded retry (ADR-13) |
 | Persistence | `db` | postgres:16-alpine | 5432 | All application data; named volume `db_data`; `pg_isready` healthcheck gates backend start |
 | Mail (dev) | `mailpit` | axllent/mailpit | 8025 UI / 1025 SMTP | Captures verification emails; QA reads them at http://localhost:8025 |

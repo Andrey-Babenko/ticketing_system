@@ -16,10 +16,8 @@ async function ping(url: string, name: string) {
 export default async function globalSetup() {
   await ping("http://localhost:8080/api/health", "The app (nginx/backend)");
   await ping("http://localhost:8025", "Mailpit");
-  if (process.env.E2E_ANGULAR) {
-    await ping(
-      "http://localhost:8081/api/health",
-      "The Angular twin (nginx/backend) — run: docker compose --profile angular up --build -d"
-    );
-  }
+  await ping(
+    "http://localhost:8081/api/health",
+    "The Angular twin (nginx/backend) — run: docker compose --profile angular up --build -d"
+  );
 }
