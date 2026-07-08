@@ -1,0 +1,20 @@
+<form (submit)="$event.preventDefault(); submit()">
+  <h2 mat-dialog-title>
+    {{ data.mode === 'edit' ? 'Rename team “' + data.initialName + '”' : 'Create team' }}
+  </h2>
+  <mat-dialog-content>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Team name</mat-label>
+      <input matInput required [value]="name()" (input)="name.set($any($event.target).value)" />
+      @if (errorMessage(); as msg) {
+        <mat-error>{{ msg }}</mat-error>
+      }
+    </mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button type="button" mat-stroked-button [disabled]="pending()" (click)="dialogRef.close()">Cancel</button>
+    <button type="submit" mat-flat-button color="primary" [disabled]="pending()">
+      {{ pending() ? 'Saving…' : (data.mode === 'edit' ? 'Save' : 'Create') }}
+    </button>
+  </mat-dialog-actions>
+</form>

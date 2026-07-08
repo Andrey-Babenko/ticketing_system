@@ -1,0 +1,38 @@
+<form (submit)="$event.preventDefault(); submit()">
+  <h2 mat-dialog-title>
+    {{ data.mode === 'edit' ? 'Edit epic “' + data.originalTitle + '”' : 'Create epic' }}
+  </h2>
+  <mat-dialog-content>
+    @if (data.mode === 'create') {
+      <p class="team-line">
+        Team: <strong>{{ data.teamName }}</strong>
+        <span class="hint">(fixed after creation)</span>
+      </p>
+    }
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Title</mat-label>
+      <input matInput required [value]="title()" (input)="title.set($any($event.target).value)" />
+      @if (titleError(); as msg) {
+        <mat-error>{{ msg }}</mat-error>
+      }
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description</mat-label>
+      <textarea matInput rows="4" [value]="description()" (input)="description.set($any($event.target).value)"></textarea>
+      @if (descriptionError(); as msg) {
+        <mat-error>{{ msg }}</mat-error>
+      } @else {
+        <mat-hint>Optional</mat-hint>
+      }
+    </mat-form-field>
+    @if (formError(); as msg) {
+      <p class="form-error">{{ msg }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button type="button" mat-stroked-button [disabled]="pending()" (click)="dialogRef.close()">Cancel</button>
+    <button type="submit" mat-flat-button color="primary" [disabled]="pending()">
+      {{ pending() ? 'Saving…' : (data.mode === 'edit' ? 'Save' : 'Create') }}
+    </button>
+  </mat-dialog-actions>
+</form>

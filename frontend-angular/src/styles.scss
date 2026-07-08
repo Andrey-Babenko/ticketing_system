@@ -63,3 +63,83 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
   text-align: center;
   font-weight: 500;
 }
+
+// Shared list-screen chrome (Teams/Epics/Board-adjacent tables).
+.page { max-width: 56rem; margin: 0 auto; }
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.page-header h1 { margin: 0; font: var(--mat-sys-title-large); }
+.subtitle { margin: 0.25rem 0 0; font-size: 0.875rem; color: var(--mat-sys-on-surface-variant); }
+.team-picker { margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+.team-picker select { padding: 0.3rem 0.5rem; border-radius: 4px; border: 1px solid var(--mat-sys-outline); font: inherit; }
+
+.banner-error {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--mat-sys-error);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--mat-sys-error) 10%, transparent);
+  color: var(--mat-sys-error);
+  font-size: 0.875rem;
+}
+
+.empty-state {
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+.empty-state.error { color: var(--mat-sys-error); }
+.empty-state.dashed { border: 1px dashed var(--mat-sys-outline); border-radius: 4px; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+.data-table th {
+  text-align: left;
+  padding: 0.5rem 1rem 0.5rem 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--mat-sys-on-surface-variant);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+.data-table td {
+  padding: 0.5rem 1rem 0.5rem 0;
+  border-bottom: 1px solid var(--mat-sys-surface-variant);
+  vertical-align: top;
+}
+.data-table th.num, .data-table td.num { text-align: right; }
+.data-table .name { font-weight: 500; }
+.data-table .desc-preview {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  max-width: 20rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint { margin-top: 0.5rem; font-size: 0.75rem; color: var(--mat-sys-on-surface-variant); }
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-right: 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--mat-sys-primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+.link-btn:hover { text-decoration: underline; }
+.link-btn.danger { color: var(--mat-sys-error); margin-right: 0; }
+.link-btn:disabled { color: var(--mat-sys-outline); cursor: not-allowed; text-decoration: none; }
+
+.team-line { margin: 0 0 0.75rem; font-size: 0.875rem; }
+.team-line .hint { display: inline; margin: 0 0 0 0.25rem; font-size: 0.75rem; }

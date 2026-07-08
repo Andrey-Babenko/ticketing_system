@@ -152,7 +152,7 @@ S8.2 by explicit decision — not a silent reorder.
     service over the generated AuthService.
   - **Acceptance:** §3/§10 flows work through :8081; labels/headings/button names
     match the React app's accessible names (E2E compatibility, ADR-18).
-- [ ] **S9.3 Teams + Epics screens** *(est. 3h)*
+- [x] **S9.3 Teams + Epics screens** *(est. 3h)*
   - **Goal:** wireframe-4/5 parity: tables with counts, create/rename dialogs
     (role-correct MatDialog), delete disabled while referenced + 409 handling,
     ?team= URL state on epics.

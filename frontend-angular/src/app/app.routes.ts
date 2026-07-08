@@ -5,8 +5,8 @@ import { Verify } from './pages/auth/verify/verify';
 import { ForgotPassword } from './pages/auth/forgot-password/forgot-password';
 import { ResetPassword } from './pages/auth/reset-password/reset-password';
 import { Layout } from './layout/layout';
-import { TeamsComponent } from './pages/teams.component';
-import { EpicsComponent } from './pages/epics.component';
+import { Teams } from './pages/teams/teams';
+import { Epics } from './pages/epics/epics';
 import { BoardComponent } from './pages/board.component';
 import { TicketDetailComponent } from './pages/ticket-detail.component';
 import { redirectIfAuthed, requireAuth } from './core/guards';
@@ -25,8 +25,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'board' },
       { path: 'board', component: BoardComponent },
       { path: 'board/:teamId', component: BoardComponent },
-      { path: 'teams', component: TeamsComponent },
-      { path: 'epics', component: EpicsComponent },
+      { path: 'teams', component: Teams },
+      { path: 'epics', component: Epics },
       { path: 'tickets/new', component: TicketDetailComponent },
       { path: 'tickets/:id', component: TicketDetailComponent },
     ],

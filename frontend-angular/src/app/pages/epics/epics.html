@@ -1,0 +1,76 @@
+<div class="page">
+  @if (teamsLoading()) {
+    <p class="empty-state">Loading…</p>
+  } @else if (!teams() || teams()!.length === 0) {
+    <h1>Epics</h1>
+    <p class="empty-state dashed">
+      No teams yet — epics belong to a team.
+      <a routerLink="/teams">Create a team first</a>.
+    </p>
+  } @else {
+    <div class="page-header">
+      <div>
+        <h1>Epics</h1>
+        <label class="team-picker">
+          Team
+          <select [value]="selectedTeam()?.id" (change)="onTeamChange($any($event.target).value)">
+            @for (t of teams(); track t.id) {
+              <option [value]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      <button mat-flat-button color="primary" type="button" (click)="openCreate()">+ Create epic</button>
+    </div>
+
+    @if (removeError(); as msg) {
+      <p class="banner-error">{{ msg }}</p>
+    }
+
+    @if (epics(); as list) {
+      @if (list.length === 0) {
+        <p class="empty-state dashed">No epics in this team yet.</p>
+      } @else {
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Title</th>
+              <th class="num">Tickets</th>
+              <th>Modified</th>
+              <th class="num">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (epic of list; track epic.id) {
+              <tr>
+                <td>
+                  <span class="name">{{ epic.title }}</span>
+                  @if (epic.description) {
+                    <p class="desc-preview">{{ epic.description }}</p>
+                  }
+                </td>
+                <td class="num">{{ epic.ticketCount }}</td>
+                <td>{{ formatRelative(epic.modifiedAt) }}</td>
+                <td class="num">
+                  <button type="button" class="link-btn" (click)="openEdit(epic)">Edit</button>
+                  <button
+                    type="button"
+                    class="link-btn danger"
+                    [disabled]="epic.ticketCount > 0"
+                    [title]="epic.ticketCount > 0 ? 'Delete is disabled while tickets reference the epic' : null"
+                    (click)="openDelete(epic)"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="hint">Delete is disabled while tickets reference the epic.</p>
+      }
+    } @else {
+      <p class="empty-state">Loading epics…</p>
+    }
+  }
+</div>
