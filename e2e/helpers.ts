@@ -42,9 +42,19 @@ export async function mailpitVerifyLink(email: string): Promise<string> {
 // dnd-kit uses pointer events (PointerSensor), not native HTML5 drag-and-drop — Playwright's
 // built-in dragAndDrop() dispatches HTML5 drag events and does not trigger it (verified in
 // Slice 6). Interpolated mouse moves reproduce real pointer-event sequences instead.
+//
+// The interpolation itself has no way to know whether dnd-kit actually recognized the
+// gesture (PointerSensor requires 8px of movement past pointerdown before it activates —
+// Board.tsx's activationConstraint) or whether onDragEnd has finished running by the time
+// mouse.up() returns. Rather than guess at how many steps/ms that takes, wait on the
+// DragOverlay's data-testid — it mounts exactly when activeTicket is set in onDragStart and
+// unmounts when onDragEnd clears it, so its presence is a direct, non-transient proxy for
+// "dnd-kit is mid-drag" (unlike the accessibility live region's text, which the very next
+// onDragOver event overwrites before a poll can reliably observe "picked up").
 export async function dragCardToColumn(page: Page, cardTestId: string, targetState: TicketState) {
   const card = page.getByTestId(cardTestId);
   const column = page.getByTestId(`column-${targetState}`);
+  const overlay = page.getByTestId("drag-overlay");
 
   const cardBox = await card.boundingBox();
   const columnBox = await column.boundingBox();
@@ -63,6 +73,13 @@ export async function dragCardToColumn(page: Page, cardTestId: string, targetSta
       startX + ((endX - startX) * i) / steps,
       startY + ((endY - startY) * i) / steps
     );
+    // Confirm the drag actually activated as soon as it's geometrically possible (past
+    // the 8px activation distance) instead of finding out only after mouse.up().
+    if (i === 1) await expect(overlay).toBeVisible({ timeout: 2000 });
   }
   await page.mouse.up();
+  // Wait for onDragEnd to actually run (it clears activeTicket, unmounting the overlay) so
+  // callers can rely on the drop — and any mutation/optimistic update it triggers — having
+  // started, not just that the OS-level mouseup event was dispatched.
+  await expect(overlay).not.toBeVisible({ timeout: 2000 });
 }

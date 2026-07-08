@@ -245,7 +245,10 @@ function BoardForTeam({
           </div>
           <DragOverlay>
             {activeTicket && (
-              <div className="w-64 rounded border border-blue-300 bg-white p-3 shadow-lg">
+              <div
+                data-testid="drag-overlay"
+                className="w-64 rounded border border-blue-300 bg-white p-3 shadow-lg"
+              >
                 <TicketCardBody ticket={activeTicket} epicName={epicName(activeTicket.epicId)} />
               </div>
             )}
