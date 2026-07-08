@@ -1,0 +1,21 @@
+@if (sent()) {
+  <p class="success">{{ message() }}</p>
+} @else {
+  <form (submit)="$event.preventDefault(); submit()" class="resend-form">
+    @if (email() === undefined) {
+      <input
+        type="email"
+        required
+        placeholder="you@example.com"
+        [value]="typedEmail()"
+        (input)="onTypedEmailInput($any($event.target).value)"
+      />
+    }
+    <button type="submit" [disabled]="pending()">
+      {{ pending() ? 'Sending…' : 'Resend email' }}
+    </button>
+    @if (failed()) {
+      <p class="error">Could not send — try again.</p>
+    }
+  </form>
+}

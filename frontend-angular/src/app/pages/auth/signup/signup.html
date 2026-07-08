@@ -1,0 +1,50 @@
+@if (created(); as user) {
+  <app-auth-card title="Check your email">
+    <p>
+      We sent a verification link to <strong>{{ user.email }}</strong>. Click it within 24
+      hours to activate your account.
+    </p>
+    <p class="switch-link">Already verified? <a routerLink="/login">Log in</a></p>
+  </app-auth-card>
+} @else {
+  <app-auth-card title="Create account">
+    <form (submit)="$event.preventDefault(); submit()">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" required [value]="email()" (input)="email.set($any($event.target).value)" />
+        @if (fieldError('email'); as msg) {
+          <mat-error>{{ msg }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Password</mat-label>
+        <input matInput type="password" required [value]="password()" (input)="password.set($any($event.target).value)" />
+        @if (fieldError('password'); as msg) {
+          <mat-error>{{ msg }}</mat-error>
+        } @else {
+          <mat-hint>Minimum 8 characters</mat-hint>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Confirm password</mat-label>
+        <input matInput type="password" required [value]="confirm()" (input)="confirm.set($any($event.target).value)" />
+        @if (confirmError(); as msg) {
+          <mat-error>{{ msg }}</mat-error>
+        }
+      </mat-form-field>
+
+      @if (apiError(); as err) {
+        @if (!err.field) {
+          <p class="form-error">{{ err.message }}</p>
+        }
+      }
+
+      <button mat-flat-button color="primary" type="submit" class="full-width" [disabled]="pending()">
+        {{ pending() ? 'Creating account…' : 'Sign up' }}
+      </button>
+    </form>
+    <p class="switch-link">Already registered? <a routerLink="/login">Log in</a></p>
+  </app-auth-card>
+}

@@ -1,0 +1,23 @@
+.resend-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.success {
+  color: var(--mat-sys-primary);
+  font-size: 0.875rem;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  font-size: 0.75rem;
+  margin: 0;
+}
+
+input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 4px;
+  font: inherit;
+}

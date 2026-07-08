@@ -1,0 +1,22 @@
+.auth-card-wrap {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 24rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  background: var(--mat-sys-surface);
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font: var(--mat-sys-title-large);
+}

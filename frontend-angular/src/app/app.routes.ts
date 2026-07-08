@@ -1,25 +1,34 @@
 import { Routes } from '@angular/router';
-import { LoginComponent } from './pages/auth/login.component';
-import { SignupComponent } from './pages/auth/signup.component';
-import { VerifyComponent } from './pages/auth/verify.component';
-import { ForgotPasswordComponent } from './pages/auth/forgot-password.component';
-import { ResetPasswordComponent } from './pages/auth/reset-password.component';
+import { Login } from './pages/auth/login/login';
+import { Signup } from './pages/auth/signup/signup';
+import { Verify } from './pages/auth/verify/verify';
+import { ForgotPassword } from './pages/auth/forgot-password/forgot-password';
+import { ResetPassword } from './pages/auth/reset-password/reset-password';
+import { Layout } from './layout/layout';
 import { TeamsComponent } from './pages/teams.component';
 import { EpicsComponent } from './pages/epics.component';
 import { BoardComponent } from './pages/board.component';
 import { TicketDetailComponent } from './pages/ticket-detail.component';
+import { redirectIfAuthed, requireAuth } from './core/guards';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
-  { path: 'signup', component: SignupComponent },
-  { path: 'verify', component: VerifyComponent },
-  { path: 'forgot-password', component: ForgotPasswordComponent },
-  { path: 'reset-password', component: ResetPasswordComponent },
-  { path: '', pathMatch: 'full', redirectTo: 'board' },
-  { path: 'board', component: BoardComponent },
-  { path: 'board/:teamId', component: BoardComponent },
-  { path: 'teams', component: TeamsComponent },
-  { path: 'epics', component: EpicsComponent },
-  { path: 'tickets/new', component: TicketDetailComponent },
-  { path: 'tickets/:id', component: TicketDetailComponent },
+  { path: 'login', component: Login, canActivate: [redirectIfAuthed] },
+  { path: 'signup', component: Signup, canActivate: [redirectIfAuthed] },
+  { path: 'verify', component: Verify },
+  { path: 'forgot-password', component: ForgotPassword, canActivate: [redirectIfAuthed] },
+  { path: 'reset-password', component: ResetPassword },
+  {
+    path: '',
+    component: Layout,
+    canActivate: [requireAuth],
+    children: [
+      { path: '', pathMatch: 'full', redirectTo: 'board' },
+      { path: 'board', component: BoardComponent },
+      { path: 'board/:teamId', component: BoardComponent },
+      { path: 'teams', component: TeamsComponent },
+      { path: 'epics', component: EpicsComponent },
+      { path: 'tickets/new', component: TicketDetailComponent },
+      { path: 'tickets/:id', component: TicketDetailComponent },
+    ],
+  },
 ];

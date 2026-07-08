@@ -145,7 +145,7 @@ S8.2 by explicit decision — not a silent reorder.
     at :8081; deep-route refresh works; /api/health reachable through :8081; generated
     client compiles; regenerating after a yaml edit shows a diff.
   - **Files:** frontend-angular/* (fresh), docker-compose.yml.
-- [ ] **S9.2 Auth screens + session plumbing** *(est. 3h)*
+- [x] **S9.2 Auth screens + session plumbing** *(est. 3h)*
   - **Goal:** login (+resend prompt on 403 EMAIL_NOT_VERIFIED), signup, verify,
     forgot-/reset-password (S8.4 parity); functional guards (RequireAuth /
     RedirectIfAuthed equivalents); 401 interceptor → /login; auth state as a signal

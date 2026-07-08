@@ -1,0 +1,21 @@
+<header class="app-header">
+  <strong class="brand">TICKET TRACKER</strong>
+  <nav class="tabs">
+    <a routerLink="/board" routerLinkActive="active">Board</a>
+    <a routerLink="/teams" routerLinkActive="active">Teams</a>
+    <a routerLink="/epics" routerLinkActive="active">Epics</a>
+  </nav>
+  @if (user(); as u) {
+    <details class="user-menu">
+      <summary>{{ u.email }} ▾</summary>
+      <div class="user-menu-panel">
+        <button type="button" (click)="logout()" [disabled]="loggingOut()">
+          {{ loggingOut() ? 'Logging out…' : 'Log out' }}
+        </button>
+      </div>
+    </details>
+  }
+</header>
+<main class="app-main">
+  <router-outlet></router-outlet>
+</main>

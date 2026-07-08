@@ -1,0 +1,35 @@
+@switch (state()) {
+  @case ('pending') {
+    <app-auth-card title="Email verification">
+      <p>Verifying…</p>
+    </app-auth-card>
+  }
+  @case ('verified') {
+    <app-auth-card title="Email verified">
+      <p>Your email address has been verified. You can log in now.</p>
+      <a routerLink="/login" class="cta-link">Continue to login</a>
+    </app-auth-card>
+  }
+  @case ('already_verified') {
+    <app-auth-card title="Email verified">
+      <p>This email address was already verified. You can log in now.</p>
+      <a routerLink="/login" class="cta-link">Continue to login</a>
+    </app-auth-card>
+  }
+  @case ('expired') {
+    <app-auth-card title="Verification failed">
+      <p class="form-error">This verification link has expired.</p>
+      <p>Enter your email to receive a new link:</p>
+      <app-resend-verification />
+      <p class="switch-link"><a routerLink="/login">Back to log in</a></p>
+    </app-auth-card>
+  }
+  @case ('invalid') {
+    <app-auth-card title="Verification failed">
+      <p class="form-error">This verification link is invalid.</p>
+      <p>Enter your email to receive a new link:</p>
+      <app-resend-verification />
+      <p class="switch-link"><a routerLink="/login">Back to log in</a></p>
+    </app-auth-card>
+  }
+}

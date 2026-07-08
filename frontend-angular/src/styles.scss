@@ -37,3 +37,29 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+// Shared across the auth-card forms (login/signup/verify/forgot-reset password).
+.full-width { width: 100%; }
+.form-error { color: var(--mat-sys-error); font-size: 0.875rem; margin: 0 0 0.75rem; }
+.forgot-link, .switch-link { font-size: 0.875rem; margin: 0.75rem 0 0; }
+.resend-box {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  background: var(--mat-sys-surface-variant);
+}
+.resend-box p { margin: 0 0 0.5rem; font-size: 0.875rem; }
+.cta-link {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 4px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  text-decoration: none;
+  text-align: center;
+  font-weight: 500;
+}
