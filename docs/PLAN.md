@@ -135,7 +135,7 @@ Full-parity second frontend consuming docs/openapi.yaml via a GENERATED client
 the existing Playwright suite runs against :8081 as a second project. Promoted from
 S8.2 by explicit decision — not a silent reorder.
 
-- [ ] **S9.1 Scaffold, generated client, Docker/compose** *(est. 2.5h)*
+- [x] **S9.1 Scaffold, generated client, Docker/compose** *(est. 2.5h)*
   - **Goal:** Angular 20 standalone app in frontend-angular/ (replacing the stub);
     Material + CDK; `npm run generate:api` → ng-openapi-gen emits typed services/models
     from ../docs/openapi.yaml into src/app/api/ (committed); multi-stage Dockerfile +

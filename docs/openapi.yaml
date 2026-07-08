@@ -30,6 +30,7 @@ security:
 paths:
   /health:
     get:
+      operationId: health
       tags: [system]
       summary: Health/readiness (public, §3)
       security: []
@@ -55,6 +56,7 @@ paths:
 
   /auth/signup:
     post:
+      operationId: signup
       tags: [auth]
       summary: Create an account and send a verification email (§3)
       security: []
@@ -79,6 +81,7 @@ paths:
 
   /auth/verify:
     post:
+      operationId: verifyEmail
       tags: [auth]
       summary: Consume a verification token (§3, ADR-9)
       description: Idempotent for verified accounts — a second call with the same token
@@ -112,6 +115,7 @@ paths:
 
   /auth/resend-verification:
     post:
+      operationId: resendVerification
       tags: [auth]
       summary: Reissue a verification email (§3, ADR-6)
       description: Always 200 with a generic message. Reissues only for existing,
@@ -140,6 +144,7 @@ paths:
 
   /auth/request-password-reset:
     post:
+      operationId: requestPasswordReset
       tags: [auth]
       summary: Request a password reset email (S8.4, ADR-17)
       description: Always 200 with a generic message (no account enumeration). Mails a
@@ -170,6 +175,7 @@ paths:
 
   /auth/reset-password:
     post:
+      operationId: resetPassword
       tags: [auth]
       summary: Consume a reset token and set a new password (S8.4, ADR-17)
       description: Single-use — the token is cleared on success. Expires after 1 hour
@@ -207,6 +213,7 @@ paths:
 
   /auth/login:
     post:
+      operationId: login
       tags: [auth]
       summary: Log in (§3, ADR-3, ADR-8)
       security: []
@@ -239,6 +246,7 @@ paths:
 
   /auth/logout:
     post:
+      operationId: logout
       tags: [auth]
       summary: Destroy the session server-side and clear the cookie (ADR-8)
       responses:
@@ -247,6 +255,7 @@ paths:
 
   /auth/me:
     get:
+      operationId: me
       tags: [auth]
       summary: Current user for the header menu
       responses:
@@ -259,6 +268,7 @@ paths:
 
   /teams:
     get:
+      operationId: listTeams
       tags: [teams]
       summary: List all teams with counts (wireframe 4)
       description: Ordered by name, case-insensitive ascending.
@@ -272,6 +282,7 @@ paths:
                 items: { $ref: '#/components/schemas/Team' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
     post:
+      operationId: createTeam
       tags: [teams]
       summary: Create a team (§4)
       requestBody:
@@ -297,6 +308,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/idPath'
     patch:
+      operationId: updateTeam
       tags: [teams]
       summary: Rename a team (§4)
       description: Uniqueness check excludes the team itself — case-only renames succeed.
@@ -321,6 +333,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
     delete:
+      operationId: deleteTeam
       tags: [teams]
       summary: Delete a team (§4, §9)
       responses:
@@ -335,6 +348,7 @@ paths:
 
   /epics:
     get:
+      operationId: listEpics
       tags: [epics]
       summary: List epics for one team (§5, wireframe 5)
       parameters:
@@ -351,6 +365,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
+      operationId: createEpic
       tags: [epics]
       summary: Create an epic bound to a team (§5 — team immutable afterwards)
       requestBody:
@@ -375,6 +390,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/idPath'
     patch:
+      operationId: updateEpic
       tags: [epics]
       summary: Edit epic title/description (§5)
       description: No teamId field exists — the team is immutable (§5). No-op saves do not
@@ -394,6 +410,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
+      operationId: deleteEpic
       tags: [epics]
       summary: Delete an epic (§5, §9)
       responses:
@@ -408,6 +425,7 @@ paths:
 
   /tickets:
     get:
+      operationId: listTickets
       tags: [tickets]
       summary: List all tickets of one team (ADR-7 — filtering is client-side)
       parameters:
@@ -424,6 +442,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
+      operationId: createTicket
       tags: [tickets]
       summary: Create a ticket (§6)
       description: createdBy is taken from the session. state defaults to `new` but any of
@@ -451,6 +470,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/idPath'
     get:
+      operationId: getTicket
       tags: [tickets]
       summary: Full ticket for the detail view (§6, wireframe 3)
       responses:
@@ -462,6 +482,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
+      operationId: updateTicket
       tags: [tickets]
       summary: Partial update — form saves and board drags share this (ADR-5)
       description: >
@@ -485,6 +506,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
+      operationId: deleteTicket
       tags: [tickets]
       summary: Delete a ticket and cascade its comments (§6)
       responses:
@@ -496,6 +518,7 @@ paths:
     parameters:
       - $ref: '#/components/parameters/idPath'
     get:
+      operationId: listComments
       tags: [comments]
       summary: Comments of a ticket, oldest first (§7)
       responses:
@@ -509,6 +532,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
+      operationId: createComment
       tags: [comments]
       summary: Add a comment (§7)
       description: Author from session. MUST NOT touch the ticket's modifiedAt (§7).
@@ -538,6 +562,7 @@ paths:
       - $ref: '#/components/parameters/idPath'
       - $ref: '#/components/parameters/commentIdPath'
     patch:
+      operationId: updateComment
       tags: [comments]
       summary: Edit own comment (S8.1, §7/§14)
       description: Author-only. Sets editedAt server-side. MUST NOT touch the
@@ -563,6 +588,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
+      operationId: deleteComment
       tags: [comments]
       summary: Delete own comment (S8.1, §7/§14)
       description: Author-only, hard delete. MUST NOT touch the ticket's modifiedAt (§7).

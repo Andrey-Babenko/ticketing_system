@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import type { TicketState } from "../frontend/src/lib/labels";
 
 const MAILPIT_URL = "http://localhost:8025";
@@ -38,18 +38,30 @@ async function mailpitLatestMessageText(email: string): Promise<string> {
   return msg.Text as string;
 }
 
+// The backend always emails links against APP_BASE_URL (:8080) — one backend serves
+// both frontends. Rewriting the origin to the running project's baseURL (no-op for the
+// chromium project, which already targets :8080) is what lets the Angular project's
+// verify/reset-password UI actually get exercised instead of silently opening the
+// React app (ADR-18's shared-oracle premise).
+function withProjectOrigin(rawUrl: string): string {
+  const baseURL = test.info().project.use.baseURL;
+  if (!baseURL) return rawUrl;
+  const parsed = new URL(rawUrl);
+  return new URL(parsed.pathname + parsed.search, baseURL).toString();
+}
+
 export async function mailpitVerifyLink(email: string): Promise<string> {
   const text = await mailpitLatestMessageText(email);
   const match = text.match(/https?:\/\/\S*\/verify\?token=\S+/);
   if (!match) throw new Error(`No verify link found in mail body: ${text}`);
-  return match[0];
+  return withProjectOrigin(match[0]);
 }
 
 export async function mailpitResetLink(email: string): Promise<string> {
   const text = await mailpitLatestMessageText(email);
   const match = text.match(/https?:\/\/\S*\/reset-password\?token=\S+/);
   if (!match) throw new Error(`No reset link found in mail body: ${text}`);
-  return match[0];
+  return withProjectOrigin(match[0]);
 }
 
 // dnd-kit uses pointer events (PointerSensor), not native HTML5 drag-and-drop — Playwright's

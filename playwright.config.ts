@@ -18,5 +18,16 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Angular twin (ADR-18) — same suite, second baseURL. Gated behind E2E_ANGULAR
+    // while the twin is mid-build (Slice 9) so a plain `npx playwright test` stays
+    // green; S9.7 removes the gate once the twin has full parity.
+    ...(process.env.E2E_ANGULAR
+      ? [
+          {
+            name: "angular",
+            use: { ...devices["Desktop Chrome"], baseURL: "http://localhost:8081" },
+          },
+        ]
+      : []),
   ],
 });
