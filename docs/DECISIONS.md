@@ -298,6 +298,52 @@ Superseding a decision = new ADR + status update here, not silent editing.
   works); session revocation is covered by a supertest case and a manual check
   (second live session dies immediately after reset).
 
+## ADR-19: SMTP secrets are env vars injected at deploy time (S8.5, §14)
+
+- **Status:** accepted · 2026-07-08
+- **Context:** §3 requires the verification/reset mail path to support a real relay
+  (`relay1.dataart.com`), and §11 forbids exposing SMTP secrets in source control.
+  `mailer.ts` already reads `SMTP_HOST/PORT/SECURE/USER/PASS/FROM` from
+  `process.env` (ADR context predates this ADR), but `docker-compose.yml` pinned
+  `SMTP_HOST`/`SMTP_PORT` to the Mailpit literals, so there was no way to point the
+  compose stack at relay1 without hand-editing the file — and no recorded decision
+  on where the credentials themselves should live.
+- **Decision:** SMTP secrets are ordinary environment variables injected at deploy
+  time, not files or committed config:
+  - **Local / manual prod-style run:** an uncommitted `.env.relay1` (see
+    `.env.relay1.example` for the shape), fed to compose with
+    `docker compose --env-file .env.relay1 up`. `.env*` is already gitignored
+    except `.env.example`.
+  - **Real production:** the orchestrator's own secret store (k8s Secret / ECS
+    Secrets Manager / Vault) injects the identical `SMTP_*` variables — same
+    contract, zero code change.
+  - `docker-compose.yml`'s `SMTP_HOST`/`SMTP_PORT` are now `${VAR:-default}`
+    (previously pinned to the Mailpit literals), matching the pattern already used
+    for `SMTP_USER/PASS/SECURE/FROM`; the Mailpit default is unchanged.
+  - **Rejected/deferred:** Docker Compose `secrets:` (files under `/run/secrets/`)
+    is more secure at rest but needs a `SMTP_PASS_FILE` read path in `mailer.ts` —
+    real app-code work, deferred until env-var injection is outgrown. Committed
+    encrypted secrets (SOPS/sealed-secrets) are over-scoped for a hackathon.
+- **Consequences:** No application code changes. `.env.relay1.example` is
+  committed as the documented template; a filled-in `.env.relay1` never is.
+  Production deployment infrastructure itself (§14) remains out of scope — this
+  ADR only fixes the config *path*, not a deployed relay.
+- **Manual verification (2026-07-08):** signed up with a real address through the
+  compose stack, `--env-file .env.relay1`. Findings, systematically isolated —
+  reachability, then port/TLS, then auth, each confirmed independently:
+  1. `relay1.dataart.com` gave 100% ICMP loss and TCP timeouts on both 587 and 465
+     with no VPN active; account creation still succeeded (SMTP failure is
+     non-fatal, per S1.1's "register default").
+  2. With the DataArt VPN connected, ICMP and TCP both succeeded on **465**; port
+     **587 still timed out** — the relay only accepts implicit TLS, not STARTTLS.
+     `.env.relay1.example` corrected from the originally-assumed 587/`secure=false`
+     to 465/`secure=true`.
+  3. At 465 the TLS handshake and EHLO succeeded, then the relay replied
+     `EAUTH: Missing credentials for "LOGIN"` — AUTH is mandatory, not optional as
+     first assumed. Template comments corrected accordingly.
+  End-to-end delivery (a received email) was not yet confirmed — blocked on
+  obtaining real relay1 credentials, tracked as follow-up.
+
 ## ADR-18: Angular twin — generated client, signals, Material/CDK, shared E2E oracle
 
 - **Status:** accepted · 2026-07-08

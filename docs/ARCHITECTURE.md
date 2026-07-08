@@ -36,7 +36,7 @@ are fine). [.env.example](../.env.example) documents host-dev values.
 |---|---|---|---|
 | `DATABASE_URL` | `postgresql://app:app@db:5432/ticketing` | backend | Prisma connection |
 | `PORT` | `3000` | backend | API listen port |
-| `SMTP_HOST` / `SMTP_PORT` | `mailpit` / `1025` | backend | nodemailer target; point at `relay1.dataart.com:587` + auth vars to satisfy §3 |
+| `SMTP_HOST` / `SMTP_PORT` | `mailpit` / `1025` | backend | nodemailer target; both are `${VAR:-default}` in compose — point at `relay1.dataart.com` / `465` (implicit TLS; 587/STARTTLS times out) + AUTH vars via `.env.relay1` to satisfy §3 (ADR-19); relay1 also requires DataArt VPN to be reachable at all |
 | `SMTP_USER` / `SMTP_PASS` / `SMTP_SECURE` | empty / empty / `false` | backend | Optional AUTH + TLS for real relays; never committed |
 | `SMTP_FROM` | `noreply@ticketing.local` | backend | From header |
 | `APP_BASE_URL` | `http://localhost:8080` | backend | Absolute base for verification links in email (ADR-9) |

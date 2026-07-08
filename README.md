@@ -115,6 +115,26 @@ npm test                      # Vitest — pure functions (board filters, optimi
 npm start                     # → http://localhost:4200, proxies /api to a host backend on :3000
 ```
 
+### Sending real email (relay1, ADR-19)
+
+By default the compose stack sends verification/reset mail to **Mailpit** — nothing to
+configure. To send through a real relay (`relay1.dataart.com`, spec §3) instead:
+
+```bash
+cp .env.relay1.example .env.relay1   # then fill in SMTP_USER/PASS — relay1 requires AUTH
+docker compose --env-file .env.relay1 up --build
+```
+
+`--env-file` only changes which file Compose uses to fill in `${VAR}` placeholders in
+`docker-compose.yml` — it does not inject anything by itself, and a real shell env var
+(e.g. `export SMTP_HOST=...`) takes priority over the file. Never commit `.env.relay1` —
+it's already covered by `.gitignore`'s `.env.*` rule.
+
+> **Confirmed by manual testing (2026-07-08):** `relay1.dataart.com` is only reachable
+> from the **DataArt VPN** (100% packet loss without it); it accepts **port 465
+> (implicit TLS)**, not 587/STARTTLS, which times out even over VPN; and it **requires
+> AUTH LOGIN** — `SMTP_USER`/`SMTP_PASS` are not optional for this relay.
+
 ## Automated tests
 
 ```bash

@@ -127,6 +127,11 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 - [x] S8.1 Edit/delete own comments (§7/§14 — lowest-risk stretch)
 - [x] S8.3 Virtualized board rendering (§14)
 - [x] S8.4 Password reset flow (§14)
+- [x] **S8.5 Prod email config path (relay1) — ADR-19** *(docs + compose only)*
+  - **Goal:** Switch backend SMTP between Mailpit (default) and `relay1.dataart.com` (§3) with one compose flag; secrets stay uncommitted; decision recorded. Design: [specs/2026-07-08-prod-email-config-design.md](superpowers/specs/2026-07-08-prod-email-config-design.md).
+  - **Changes:** interpolate `SMTP_HOST/PORT` in docker-compose.yml (`${VAR:-default}`, mailpit default intact); committed `.env.relay1.example` template (real `.env.relay1` uncommitted); ADR-19 in DECISIONS.md; README "Sending real email" section; ARCHITECTURE.md env-table drift fix.
+  - **Acceptance:** `docker compose config` still resolves `SMTP_HOST=mailpit`; `docker compose --env-file .env.relay1 config | grep SMTP` flips to relay1; no credential committed (§11). No app code / tests (documented convention only; prod infra out of scope §14).
+  - **Out of scope (ADR-19):** host-dev `.env` loading, Docker `secrets:`/`_FILE`, orchestrator manifests, DNS/SPF/DKIM.
 
 ## Slice 9 — Angular twin (est. ~19h) — post-DoD stretch, ADR-18
 
