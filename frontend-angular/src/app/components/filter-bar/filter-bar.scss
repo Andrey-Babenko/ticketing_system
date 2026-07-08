@@ -1,0 +1,26 @@
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.filter-bar input,
+.filter-bar select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.filter-bar input[type='search'] {
+  width: 12rem;
+}
+
+.visible-count {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
+}

@@ -1,0 +1,13 @@
+<a
+  [routerLink]="['/tickets', ticket().id]"
+  [attr.data-testid]="'card-' + ticket().id"
+  draggable="false"
+  class="ticket-card"
+>
+  <span class="type-badge type-{{ ticket().type }}">{{ TYPE_LABELS[ticket().type] }}</span>
+  <p class="card-title">{{ ticket().title }}</p>
+  @if (epicName(); as name) {
+    <p class="card-epic">Epic: {{ name }}</p>
+  }
+  <p class="card-modified">{{ formatRelative(ticket().modifiedAt) }}</p>
+</a>

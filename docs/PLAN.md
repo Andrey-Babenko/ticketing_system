@@ -162,7 +162,7 @@ S8.2 by explicit decision — not a silent reorder.
     confirm-delete (alertdialog); comments panel with add + edit/delete own
     (S8.1 parity, "(edited)" marker, ownership-gated controls).
   - **Acceptance:** §6/§7 flows through :8081; comment steps of happy.spec.ts pass.
-- [ ] **S9.5 Board rendering, filters, virtual scroll** *(est. 3h)*
+- [x] **S9.5 Board rendering, filters, virtual scroll** *(est. 3h)*
   - **Goal:** 5 columns, fixed-height cards in cdk-virtual-scroll-viewport per column
     (S8.3 parity; testids column-STATE / column-scroll-STATE / card-N), client-side
     AND filters + counts (port boardFilters.ts pure functions), empty states.

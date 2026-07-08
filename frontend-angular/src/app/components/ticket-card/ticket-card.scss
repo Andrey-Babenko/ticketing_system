@@ -1,0 +1,54 @@
+:host {
+  display: contents;
+}
+
+.ticket-card {
+  display: block;
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  background: var(--mat-sys-surface);
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden;
+}
+
+.ticket-card:hover {
+  border-color: var(--mat-sys-primary);
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.type-bug { background: #fee2e2; color: #b91c1c; }
+.type-feature { background: #dbeafe; color: #1d4ed8; }
+.type-fix { background: #dcfce7; color: #15803d; }
+
+.card-title {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-epic, .card-modified {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

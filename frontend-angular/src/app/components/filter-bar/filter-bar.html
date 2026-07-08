@@ -1,0 +1,25 @@
+<div class="filter-bar">
+  <input
+    type="search"
+    placeholder="Search titles…"
+    [value]="filters().search"
+    (input)="onSearchInput($any($event.target).value)"
+  />
+  <select (change)="onTypeChange($any($event.target).value)">
+    <option value="" [selected]="filters().type === null">All types</option>
+    @for (t of TYPE_ORDER; track t) {
+      <option [value]="t" [selected]="filters().type === t">{{ TYPE_LABELS[t] }}</option>
+    }
+  </select>
+  <select (change)="onEpicChange($any($event.target).value)">
+    <option value="" [selected]="filters().epic === null">All epics</option>
+    <option value="none" [selected]="filters().epic === 'none'">No epic</option>
+    @for (e of epics(); track e.id) {
+      <option [value]="e.id" [selected]="filters().epic === e.id">{{ e.title }}</option>
+    }
+  </select>
+  @if (!isDefault()) {
+    <button type="button" mat-stroked-button (click)="clear()">Clear</button>
+  }
+  <span class="visible-count">{{ visibleCount() }} {{ visibleCount() === 1 ? 'ticket' : 'tickets' }}</span>
+</div>

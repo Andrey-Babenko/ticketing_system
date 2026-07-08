@@ -37,6 +37,7 @@ body {
 
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+app-root { display: block; height: 100%; }
 
 // Shared across the auth-card forms (login/signup/verify/forgot-reset password).
 .full-width { width: 100%; }

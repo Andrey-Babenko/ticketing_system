@@ -1,0 +1,11 @@
+<div class="board-column" [attr.data-testid]="'column-' + state()">
+  <div class="column-header">
+    <h2>{{ STATE_LABELS[state()] }}</h2>
+    <span class="count">{{ tickets().length }}</span>
+  </div>
+  <cdk-virtual-scroll-viewport itemSize="100" class="column-scroll" [attr.data-testid]="'column-scroll-' + state()">
+    <div *cdkVirtualFor="let ticket of tickets(); trackBy: trackById" class="card-slot">
+      <app-ticket-card [ticket]="ticket" [epics]="epics()" />
+    </div>
+  </cdk-virtual-scroll-viewport>
+</div>

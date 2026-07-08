@@ -1,13 +1,15 @@
-<div class="page">
-  @if (loading()) {
-    <p class="empty-state">Loading…</p>
-  } @else if (loadError()) {
-    <p class="empty-state error">Could not load teams.</p>
-  } @else if (!teams() || teams()!.length === 0) {
+@if (loading()) {
+  <p class="empty-state">Loading…</p>
+} @else if (loadError()) {
+  <p class="empty-state error">Could not load teams.</p>
+} @else if (!teams() || teams()!.length === 0) {
+  <div class="page">
     <h1>Board</h1>
     <p class="empty-state dashed">No teams yet. <a routerLink="/teams">Create a team first</a>.</p>
-  } @else {
-    <div class="page-header">
+  </div>
+} @else {
+  <div class="board-page">
+    <div class="board-toolbar">
       <label class="team-picker">
         <select (change)="onTeamChange($any($event.target).value)">
           @for (t of teams(); track t.id) {
@@ -24,6 +26,19 @@
         + New ticket
       </a>
     </div>
-    <p class="empty-state">Board rendering — implemented in S9.5.</p>
-  }
-</div>
+
+    <app-filter-bar [(filters)]="filters" [epics]="epics() ?? []" [visibleCount]="filteredTickets().length" />
+
+    @if (tickets() === undefined) {
+      <p class="empty-state">Loading tickets…</p>
+    } @else if (tickets()!.length === 0) {
+      <p class="empty-state dashed">No tickets yet — create the first one above.</p>
+    } @else {
+      <div class="board-columns">
+        @for (state of STATE_ORDER; track state) {
+          <app-board-column [state]="state" [tickets]="groups()[state]" [epics]="epics() ?? []" />
+        }
+      </div>
+    }
+  </div>
+}
