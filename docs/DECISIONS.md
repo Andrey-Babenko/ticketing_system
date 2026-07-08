@@ -261,3 +261,39 @@ Superseding a decision = new ADR + status update here, not silent editing.
   rendered card); the 1,000-ticket bar is a documented manual check (README) since
   seeding it in every CI run isn't worth the suite-time. `TicketCard` visuals and
   `boardFilters.ts` are untouched — this is a render-layer change only.
+
+## ADR-17: Password reset — 1h hashed tokens, full session revocation (S8.4, §14)
+
+- **Status:** accepted · 2026-07-08
+- **Context:** §14 lists "password reset flow" as a stretch with no semantics. The
+  obvious template is ADR-9's verification-token design, but a reset token is
+  materially different: it grants direct account takeover, where a verification
+  token "only flips a verification flag and grants no login." Every place ADR-9's
+  rationale relied on that low privilege needed its own decision here.
+- **Decision:**
+  - **1-hour TTL**, not 24h — a reset link is normally used minutes after being
+    requested, unlike a verification link that might sit in an inbox for a day;
+    shorter TTL shrinks the takeover window if a relay or inbox is compromised.
+  - **Hash at rest**: `User.resetTokenHash = sha256(token)` (new column), never the
+    raw value — a leaked DB read (backup, snapshot) then can't be replayed into a
+    takeover. Plain SHA-256, not Argon2: the token is already 32 random bytes, so
+    there's nothing to slow a brute-force of. This is a deliberate reversal of
+    ADR-9's raw storage, which was correct for the lower-stakes verification token
+    and is not correct here.
+  - **Successful reset revokes ALL of the account's sessions**
+    (`session.deleteMany({where:{userId}})`) — the person resetting a password is
+    usually worried the old one leaked, so an attacker's live session must not
+    survive. Exactly the revocation ADR-8 chose DB-backed sessions to get.
+  - **Unverified accounts get no reset mail** (identical generic 200 regardless) —
+    keeps the two email-token flows fully orthogonal: an unverified user's path
+    stays resend-verification → verify (ADR-3's login-screen prompt), never crossing
+    into reset-token state.
+  - Endpoints: `POST /auth/request-password-reset {email}` (mirrors
+    resend-verification's anti-enumeration 200) and `POST /auth/reset-password
+    {token, password}` (mirrors verify's lookup/expiry resolution order); both public.
+    No auto-login after reset (mirrors §3's no-auto-login-after-verify).
+- **Consequences:** One migration (`resetTokenHash`, `resetTokenExpiresAt`);
+  `docs/openapi.yaml` gains both operations. `e2e/password-reset.spec.ts` covers the
+  full mail round-trip (request → Mailpit → reset → old password dead, new one
+  works); session revocation is covered by a supertest case and a manual check
+  (second live session dies immediately after reset).

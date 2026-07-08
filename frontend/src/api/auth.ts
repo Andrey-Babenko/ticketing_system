@@ -35,6 +35,18 @@ export const resendVerification = (email: string) =>
     body: JSON.stringify({ email }),
   });
 
+export const requestPasswordReset = (email: string) =>
+  api<{ message: string }>("/auth/request-password-reset", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+export const resetPassword = (token: string, password: string) =>
+  api<{ message: string }>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+
 export const meKey = ["me"] as const;
 
 export function useMe() {

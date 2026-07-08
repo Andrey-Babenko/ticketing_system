@@ -4,6 +4,8 @@ import { RequireAuth, RedirectIfAuthed } from "./lib/authGuard";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Verify from "./pages/Verify";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Board from "./pages/Board";
 import Teams from "./pages/Teams";
 import Epics from "./pages/Epics";
@@ -16,6 +18,9 @@ export const router = createBrowserRouter([
   { path: "/login", element: <RedirectIfAuthed><Login /></RedirectIfAuthed> },
   { path: "/signup", element: <RedirectIfAuthed><Signup /></RedirectIfAuthed> },
   { path: "/verify", element: <Verify /> },
+  { path: "/forgot-password", element: <RedirectIfAuthed><ForgotPassword /></RedirectIfAuthed> },
+  // Unguarded like /verify — the screen is a function of the token, not the session.
+  { path: "/reset-password", element: <ResetPassword /> },
   {
     element: <RequireAuth><Layout /></RequireAuth>,
     children: [

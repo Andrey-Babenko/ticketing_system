@@ -6,6 +6,7 @@ import { sendVerificationEmail } from "../src/lib/mailer.js";
 
 vi.mock("../src/lib/mailer.js", () => ({
   sendVerificationEmail: vi.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(undefined),
 }));
 const mockSend = vi.mocked(sendVerificationEmail);
 

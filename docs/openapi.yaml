@@ -138,6 +138,73 @@ paths:
                   message: { type: string }
         '400': { $ref: '#/components/responses/ValidationError' }
 
+  /auth/request-password-reset:
+    post:
+      tags: [auth]
+      summary: Request a password reset email (S8.4, ADR-17)
+      description: Always 200 with a generic message (no account enumeration). Mails a
+        token only to existing, VERIFIED accounts — unverified accounts use
+        resend-verification instead, keeping the two token flows orthogonal. A new
+        request invalidates any earlier unused reset token by overwrite.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Generic acknowledgement (no account enumeration)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+        '400': { $ref: '#/components/responses/ValidationError' }
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Consume a reset token and set a new password (S8.4, ADR-17)
+      description: Single-use — the token is cleared on success. Expires after 1 hour
+        (shorter than the 24h verification TTL; a reset token grants account takeover).
+        On success, ALL of the account's existing sessions are revoked, not just the
+        one making this request.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '200':
+          description: Password changed; no session is created (no auto-login)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+        '400':
+          description: code=TOKEN_EXPIRED (known token past 1h) or TOKEN_INVALID
+            (unknown/already-used token), or VALIDATION (password too short/long) —
+            a VALIDATION failure does NOT consume the token.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /auth/login:
     post:
       tags: [auth]

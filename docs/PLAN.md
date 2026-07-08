@@ -127,7 +127,7 @@ Contract of record for all endpoints: [openapi.yaml](openapi.yaml). Estimates as
 - [x] S8.1 Edit/delete own comments (§7/§14 — lowest-risk stretch)
 - [ ] S8.2 Angular twin consuming openapi.yaml (frontend-angular/, compose profile exists)
 - [x] S8.3 Virtualized board rendering (§14)
-- [ ] S8.4 Password reset flow (§14)
+- [x] S8.4 Password reset flow (§14)
 
 ---
 

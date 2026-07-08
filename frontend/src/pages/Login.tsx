@@ -51,6 +51,11 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
           error={fieldError("password")}
         />
+        <p className="mb-3 text-sm">
+          <Link to="/forgot-password" className="font-medium text-blue-700 hover:underline">
+            Forgot password?
+          </Link>
+        </p>
         {apiError && !apiError.field && !notVerified && (
           <p className="mb-3 text-sm text-red-600">{apiError.message}</p>
         )}

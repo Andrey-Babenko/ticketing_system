@@ -2,14 +2,21 @@ import { Router } from "express";
 import argon2 from "argon2";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
-import { generateToken } from "../lib/tokens.js";
-import { sendVerificationEmail } from "../lib/mailer.js";
+import { generateToken, hashToken } from "../lib/tokens.js";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/mailer.js";
 import { validate } from "../middleware/validate.js";
 import { ApiError } from "../middleware/errors.js";
 import { SESSION_LIFETIME_MS } from "../middleware/auth.js";
-import { credentialsSchema, verifySchema, resendSchema } from "../validation/auth.js";
+import {
+  credentialsSchema,
+  verifySchema,
+  resendSchema,
+  requestResetSchema,
+  resetPasswordSchema,
+} from "../validation/auth.js";
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000; // §3: tokens expire after 24 hours
+const RESET_TTL_MS = 60 * 60 * 1000; // ADR-17: 1h — shorter than verify's 24h (takeover risk)
 
 export const authRouter = Router();
 
@@ -94,6 +101,61 @@ authRouter.post("/resend-verification", validate(resendSchema), async (req, res)
     message:
       "If an unverified account exists for this address, a new verification email has been sent.",
   });
+});
+
+authRouter.post(
+  "/request-password-reset",
+  validate(requestResetSchema),
+  async (req, res) => {
+    const { email } = req.body as { email: string };
+
+    // ADR-17: reset mail goes only to existing, VERIFIED accounts — unverified users'
+    // path stays resend-verification, keeping the two token flows orthogonal. Response
+    // never varies (no enumeration), same as resend-verification.
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user && user.emailVerifiedAt) {
+      const token = generateToken(); // overwrite = older tokens dead by construction
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetTokenHash: hashToken(token),
+          resetTokenExpiresAt: new Date(Date.now() + RESET_TTL_MS),
+        },
+      });
+      try {
+        await sendPasswordResetEmail(user.email, token);
+      } catch (e) {
+        console.error("request-password-reset: mail failed:", e);
+      }
+    }
+
+    res.json({
+      message: "If an account exists for this address, a password reset email has been sent.",
+    });
+  }
+);
+
+authRouter.post("/reset-password", validate(resetPasswordSchema), async (req, res) => {
+  const { token, password } = req.body as { token: string; password: string };
+
+  const user = await prisma.user.findUnique({ where: { resetTokenHash: hashToken(token) } });
+  if (!user) throw new ApiError(400, "TOKEN_INVALID", "Reset link is invalid");
+  if (user.resetTokenExpiresAt! <= new Date()) {
+    throw new ApiError(400, "TOKEN_EXPIRED", "Reset link has expired");
+  }
+
+  const passwordHash = await argon2.hash(password);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, resetTokenHash: null, resetTokenExpiresAt: null },
+    }),
+    // ADR-17: a reset implies the old password may be compromised — revoke every
+    // existing session, not just the one (if any) making this request.
+    prisma.session.deleteMany({ where: { userId: user.id } }),
+  ]);
+
+  res.json({ message: "Password reset. You can log in with your new password now." });
 });
 
 authRouter.post("/login", validate(credentialsSchema), async (req, res) => {

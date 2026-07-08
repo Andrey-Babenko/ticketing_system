@@ -189,6 +189,29 @@ drag-and-drop still works for any rendered card.
 `${STATES[$((RANDOM % 5))]}` silently drops the last element and returns empty (→ 400) for
 index 0. Use `${STATES[$(( (RANDOM % 5) + 1 ))]}` in zsh, or `bash -c '...'`.
 
+### Password reset (S8.4, §14 stretch, ADR-17)
+
+Covered end-to-end by `e2e/password-reset.spec.ts`. One thing that test doesn't check —
+session revocation — is worth a manual pass:
+
+1. Log in as a verified user in one browser/session ("session A").
+2. From the login screen, click "Forgot password?", submit that email, and confirm
+   the "Check your email" copy.
+3. Open Mailpit (`http://localhost:8025`), open the "Reset your password" mail, click
+   the link — it lands on `/reset-password?token=…`.
+4. Set a new password; you land on the "Continue to login" panel (no auto-login, same
+   as verification).
+5. Back in session A (still open in the other browser), reload any page — you're
+   bounced to `/login`: the reset revoked **every** session on the account, not just
+   the one that requested it.
+6. Confirm the old password now gets `INVALID_CREDENTIALS` and the new one logs in.
+
+`curl` shortcut for steps 1-6 without a browser (useful for scripting the session-
+revocation check): sign up/verify/login for session A's cookie, then
+`POST /api/auth/request-password-reset`, pull the token from Mailpit's API the same
+way as the E2E helper, `POST /api/auth/reset-password`, then re-`GET /api/auth/me`
+with session A's cookie → `401`.
+
 ## Project layout
 
 ```

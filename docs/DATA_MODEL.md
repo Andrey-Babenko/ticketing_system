@@ -39,6 +39,8 @@ model User {
   emailVerifiedAt            DateTime? // null = unverified; gates login (ADR-3)
   verificationToken          String?   @unique // raw 32-byte base64url (ADR-9)
   verificationTokenExpiresAt DateTime? // issuance + 24h (§3)
+  resetTokenHash             String?   @unique // sha256(token) — never raw (S8.4, ADR-17)
+  resetTokenExpiresAt        DateTime? // issuance + 1h (ADR-17)
   createdAt                  DateTime  @default(now())
 
   sessions Session[]

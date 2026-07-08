@@ -10,10 +10,11 @@ export function unique(label: string): string {
   return `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// Polls Mailpit's REST API for the verification email sent to `email` and extracts the
-// token from its plain-text body. Polling (not a fixed wait) because mail delivery is
-// async relative to the signup API response returning.
-export async function mailpitVerifyLink(email: string): Promise<string> {
+// Polls Mailpit's REST API for the newest email sent to `email` and returns its
+// plain-text body. Polling (not a fixed wait) because mail delivery is async relative
+// to the triggering API response returning. Shared by every token-link email
+// (verification, password reset) — callers pull their own link shape out of the text.
+async function mailpitLatestMessageText(email: string): Promise<string> {
   await expect
     .poll(
       async () => {
@@ -23,7 +24,7 @@ export async function mailpitVerifyLink(email: string): Promise<string> {
         const body = await res.json();
         return body.messages_count as number;
       },
-      { message: `waiting for a verification email to ${email}`, timeout: 15_000 }
+      { message: `waiting for an email to ${email}`, timeout: 15_000 }
     )
     .toBeGreaterThan(0);
 
@@ -31,11 +32,23 @@ export async function mailpitVerifyLink(email: string): Promise<string> {
     `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${email}`)}`
   );
   const { messages } = await searchRes.json();
-  const latest = messages[0]; // one unique email per run → exactly one match in practice
+  const latest = messages[0]; // newest first; reissued tokens mean later calls must re-poll
   const msgRes = await fetch(`${MAILPIT_URL}/api/v1/message/${latest.ID}`);
   const msg = await msgRes.json();
-  const match = (msg.Text as string).match(/https?:\/\/\S*\/verify\?token=\S+/);
-  if (!match) throw new Error(`No verify link found in mail body: ${msg.Text}`);
+  return msg.Text as string;
+}
+
+export async function mailpitVerifyLink(email: string): Promise<string> {
+  const text = await mailpitLatestMessageText(email);
+  const match = text.match(/https?:\/\/\S*\/verify\?token=\S+/);
+  if (!match) throw new Error(`No verify link found in mail body: ${text}`);
+  return match[0];
+}
+
+export async function mailpitResetLink(email: string): Promise<string> {
+  const text = await mailpitLatestMessageText(email);
+  const match = text.match(/https?:\/\/\S*\/reset-password\?token=\S+/);
+  if (!match) throw new Error(`No reset link found in mail body: ${text}`);
   return match[0];
 }
 

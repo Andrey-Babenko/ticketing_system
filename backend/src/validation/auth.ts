@@ -12,3 +12,7 @@ const password = z
 export const credentialsSchema = z.object({ email, password }); // signup + login
 export const verifySchema = z.object({ token: z.string().min(1) });
 export const resendSchema = z.object({ email });
+
+// S8.4/ADR-17
+export const requestResetSchema = z.object({ email });
+export const resetPasswordSchema = z.object({ token: z.string().min(1), password });

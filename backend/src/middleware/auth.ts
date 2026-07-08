@@ -9,6 +9,8 @@ const PUBLIC_PATHS = new Set([
   "/api/auth/login",
   "/api/auth/verify",
   "/api/auth/resend-verification",
+  "/api/auth/request-password-reset",
+  "/api/auth/reset-password",
 ]);
 
 export const SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (ADR-8)
