@@ -1,0 +1,129 @@
+@if (teamsLoading()) {
+  <p class="empty-state">Loading…</p>
+} @else if (teamsError()) {
+  <p class="empty-state error">Could not load teams — try reloading.</p>
+} @else if (!isCreate && ticketNotFound()) {
+  <p class="empty-state error">Ticket not found.</p>
+} @else if (!isCreate && ticketLoading()) {
+  <p class="empty-state">Loading ticket…</p>
+} @else if (isCreate && (!teams() || teams()!.length === 0)) {
+  <div class="page">
+    <h1>New ticket</h1>
+    <p class="empty-state dashed">
+      Tickets belong to a team. <a routerLink="/teams">Create a team first</a>.
+    </p>
+  </div>
+} @else {
+  <div class="ticket-page">
+    <div class="back-link">
+      <a [routerLink]="['/board', backTeamId()]">← Back to {{ backTeamName() }}</a>
+    </div>
+
+    <div class="ticket-header">
+      <div>
+        @if (ticket(); as t) {
+          <p class="meta">
+            #{{ t.id }} · Created by {{ t.createdBy.email }} · Created {{ formatUtc(t.createdAt) }} ·
+            Modified {{ formatUtc(t.modifiedAt) }}
+          </p>
+          <h1>{{ t.title }}</h1>
+        } @else {
+          <h1>New ticket</h1>
+        }
+      </div>
+      <div class="ticket-actions">
+        @if (ticket()) {
+          <button
+            type="button"
+            mat-stroked-button
+            color="warn"
+            [disabled]="pending() || deleting()"
+            (click)="confirmDelete()"
+          >
+            Delete
+          </button>
+        }
+        <button type="submit" form="ticket-form" mat-flat-button color="primary" [disabled]="pending() || deleting()">
+          {{ pending() ? 'Saving…' : ticket() ? 'Save' : 'Create' }}
+        </button>
+      </div>
+    </div>
+
+    @if (removeError(); as msg) {
+      <p class="banner-error">{{ msg }}</p>
+    }
+
+    <div class="ticket-grid">
+      <form id="ticket-form" (submit)="$event.preventDefault(); submit()">
+        <div class="field-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>Team</mat-label>
+            <select matNativeControl required (change)="onTeamChange($any($event.target).value)">
+              @for (t of teams(); track t.id) {
+                <option [value]="t.id" [selected]="t.id === teamId()">{{ t.name }}</option>
+              }
+            </select>
+            @if (fieldError('teamId'); as msg) {
+              <mat-error>{{ msg }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Type</mat-label>
+            <select matNativeControl [value]="type()" (change)="type.set($any($event.target).value)">
+              @for (t of TYPE_ORDER; track t) {
+                <option [value]="t">{{ TYPE_LABELS[t] }}</option>
+              }
+            </select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>State</mat-label>
+            <select matNativeControl [value]="state()" (change)="state.set($any($event.target).value)">
+              @for (s of STATE_ORDER; track s) {
+                <option [value]="s">{{ STATE_LABELS[s] }}</option>
+              }
+            </select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Epic</mat-label>
+            <select matNativeControl (change)="onEpicChange($any($event.target).value)">
+              <option value="" [selected]="epicId() === null">No epic</option>
+              @for (epic of epics(); track epic.id) {
+                <option [value]="epic.id" [selected]="epic.id === epicId()">{{ epic.title }}</option>
+              }
+            </select>
+            @if (fieldError('epicId'); as msg) {
+              <mat-error>{{ msg }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Title</mat-label>
+          <input matInput required [value]="title()" (input)="title.set($any($event.target).value)" />
+          @if (fieldError('title'); as msg) {
+            <mat-error>{{ msg }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Body</mat-label>
+          <textarea matInput rows="10" required [value]="body()" (input)="body.set($any($event.target).value)"></textarea>
+          @if (fieldError('body'); as msg) {
+            <mat-error>{{ msg }}</mat-error>
+          }
+        </mat-form-field>
+
+        @if (formError(); as msg) {
+          <p class="form-error">{{ msg }}</p>
+        }
+      </form>
+
+      @if (ticket(); as t) {
+        <app-comments-panel [ticketId]="t.id" />
+      }
+    </div>
+  </div>
+}

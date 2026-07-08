@@ -157,7 +157,7 @@ S8.2 by explicit decision — not a silent reorder.
     (role-correct MatDialog), delete disabled while referenced + 409 handling,
     ?team= URL state on epics.
   - **Acceptance:** §4/§5 flows through :8081; happy.spec.ts team/epic steps pass.
-- [ ] **S9.4 Ticket detail/create + comments** *(est. 3h)*
+- [x] **S9.4 Ticket detail/create + comments** *(est. 3h)*
   - **Goal:** wireframe-3 parity incl. team-change-clears-epic (§6), metadata line,
     confirm-delete (alertdialog); comments panel with add + edit/delete own
     (S8.1 parity, "(edited)" marker, ownership-gated controls).

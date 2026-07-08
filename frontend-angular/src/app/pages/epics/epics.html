@@ -13,9 +13,9 @@
         <h1>Epics</h1>
         <label class="team-picker">
           Team
-          <select [value]="selectedTeam()?.id" (change)="onTeamChange($any($event.target).value)">
+          <select (change)="onTeamChange($any($event.target).value)">
             @for (t of teams(); track t.id) {
-              <option [value]="t.id">{{ t.name }}</option>
+              <option [value]="t.id" [selected]="t.id === selectedTeam()?.id">{{ t.name }}</option>
             }
           </select>
         </label>

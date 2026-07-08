@@ -7,8 +7,8 @@ import { ResetPassword } from './pages/auth/reset-password/reset-password';
 import { Layout } from './layout/layout';
 import { Teams } from './pages/teams/teams';
 import { Epics } from './pages/epics/epics';
-import { BoardComponent } from './pages/board.component';
-import { TicketDetailComponent } from './pages/ticket-detail.component';
+import { Board } from './pages/board/board';
+import { TicketDetail } from './pages/ticket-detail/ticket-detail';
 import { redirectIfAuthed, requireAuth } from './core/guards';
 
 export const routes: Routes = [
@@ -23,12 +23,12 @@ export const routes: Routes = [
     canActivate: [requireAuth],
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'board' },
-      { path: 'board', component: BoardComponent },
-      { path: 'board/:teamId', component: BoardComponent },
+      { path: 'board', component: Board },
+      { path: 'board/:teamId', component: Board },
       { path: 'teams', component: Teams },
       { path: 'epics', component: Epics },
-      { path: 'tickets/new', component: TicketDetailComponent },
-      { path: 'tickets/:id', component: TicketDetailComponent },
+      { path: 'tickets/new', component: TicketDetail, data: { create: true } },
+      { path: 'tickets/:id', component: TicketDetail },
     ],
   },
 ];

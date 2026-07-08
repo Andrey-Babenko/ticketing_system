@@ -1,0 +1,29 @@
+<div class="page">
+  @if (loading()) {
+    <p class="empty-state">Loading…</p>
+  } @else if (loadError()) {
+    <p class="empty-state error">Could not load teams.</p>
+  } @else if (!teams() || teams()!.length === 0) {
+    <h1>Board</h1>
+    <p class="empty-state dashed">No teams yet. <a routerLink="/teams">Create a team first</a>.</p>
+  } @else {
+    <div class="page-header">
+      <label class="team-picker">
+        <select (change)="onTeamChange($any($event.target).value)">
+          @for (t of teams(); track t.id) {
+            <option [value]="t.id" [selected]="t.id === selectedTeam()?.id">{{ t.name }}</option>
+          }
+        </select>
+      </label>
+      <a
+        mat-flat-button
+        color="primary"
+        [routerLink]="['/tickets/new']"
+        [queryParams]="{ team: selectedTeam()?.id }"
+      >
+        + New ticket
+      </a>
+    </div>
+    <p class="empty-state">Board rendering — implemented in S9.5.</p>
+  }
+</div>

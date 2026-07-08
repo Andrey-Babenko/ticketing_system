@@ -1,0 +1,81 @@
+<section class="comments-panel">
+  <h2>Comments{{ comments() ? ' (' + comments()!.length + ')' : '' }}</h2>
+
+  @if (comments(); as list) {
+    @if (loadError()) {
+      <p class="msg error">Could not load comments.</p>
+    } @else if (list.length === 0) {
+      <p class="msg">No comments yet.</p>
+    } @else {
+      <ul class="comment-list">
+        @for (c of list; track c.id) {
+          <li class="comment-item">
+            <div class="comment-meta">
+              <p>
+                <span class="author">{{ c.author.email }}</span> · {{ formatUtc(c.createdAt) }}
+                @if (c.editedAt) {
+                  <span [title]="'Edited ' + formatUtc(c.editedAt)"> · (edited)</span>
+                }
+              </p>
+              @if (isOwn(c) && editingId() !== c.id) {
+                <span class="comment-actions">
+                  <button type="button" class="link-btn" (click)="startEdit(c)">Edit</button>
+                  <button type="button" class="link-btn danger" (click)="confirmDelete(c)">Delete</button>
+                </span>
+              }
+            </div>
+
+            @if (editingId() === c.id) {
+              <form (submit)="$event.preventDefault(); saveEdit(c)">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Edit comment</mat-label>
+                  <textarea matInput rows="3" required [value]="draft()" (input)="draft.set($any($event.target).value)"></textarea>
+                  @if (editError()?.field === 'body') {
+                    <mat-error>{{ editError()!.message }}</mat-error>
+                  }
+                </mat-form-field>
+                @if (editError(); as err) {
+                  @if (err.field !== 'body') {
+                    <p class="form-error">{{ err.message }}</p>
+                  }
+                }
+                <div class="comment-edit-actions">
+                  <button type="submit" mat-flat-button color="primary" [disabled]="editPending()">
+                    {{ editPending() ? 'Saving…' : 'Save' }}
+                  </button>
+                  <button type="button" mat-stroked-button [disabled]="editPending()" (click)="cancelEdit()">Cancel</button>
+                </div>
+              </form>
+            } @else {
+              <p class="comment-body">{{ c.body }}</p>
+            }
+          </li>
+        }
+      </ul>
+    }
+  } @else {
+    <p class="msg">Loading comments…</p>
+  }
+
+  @if (removeError(); as msg) {
+    <p class="form-error">{{ msg }}</p>
+  }
+
+  <form class="comment-add-form" (submit)="$event.preventDefault(); post()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Add a comment</mat-label>
+      <textarea matInput rows="3" [value]="newBody()" (input)="newBody.set($any($event.target).value)"></textarea>
+      @if (postError()?.field === 'body') {
+        <mat-error>{{ postError()!.message }}</mat-error>
+      }
+    </mat-form-field>
+    @if (postError(); as err) {
+      @if (err.field !== 'body') {
+        <p class="form-error">{{ err.message }}</p>
+      }
+    }
+    <button type="submit" mat-flat-button color="primary" [disabled]="posting()">
+      {{ posting() ? 'Posting…' : 'Post comment' }}
+    </button>
+  </form>
+</section>
