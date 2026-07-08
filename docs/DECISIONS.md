@@ -227,3 +227,37 @@ Superseding a decision = new ADR + status update here, not silent editing.
   operations, a `FORBIDDEN` error code, and a nullable `editedAt` on `Comment`. Ownership
   is enforced server-side (`authorId === req.user.id`); the UI's own-comment button
   gating (`useMe()`) is a convenience, not the security boundary.
+
+## ADR-16: Virtualized board columns via @tanstack/react-virtual (S8.3, §8/§14)
+
+- **Status:** accepted · 2026-07-08
+- **Context:** §14 lists "virtualized rendering for large boards" as a stretch; ADR-7
+  already anticipated it ("virtualization is already the sanctioned stretch"). §8's
+  mandatory bar is 100 tickets; this stretch targets 1,000/team, smooth. Cards are
+  variable-height (wrapping title, optional epic line) and each of the 5 columns is an
+  independent list — ruling out fixed-row-size virtualizers.
+- **Decision:**
+  - `@tanstack/react-virtual`'s `useVirtualizer`, one instance per `Column`, with
+    `measureElement` for dynamic row heights — same TanStack family as the query layer
+    (ADR-14 precedent: minimal, canonical usage of a well-known dependency).
+  - Always virtualize (no small-board/large-board code fork) — one path, exercised by
+    every existing E2E test for free.
+  - Each column becomes its own scroll container (Trello-style independent scroll),
+    which requires the board to become viewport-height instead of the whole page
+    growing/scrolling: `#root` moved from `min-height:100svh` to a fixed
+    `height:100svh; overflow:hidden`, and `Layout`'s `<main>` became the scroll
+    container for every non-board page (`overflow-y-auto`) so their behavior is
+    unchanged.
+  - `data-testid="column-<state>"` keeps its original meaning (the whole column shell,
+    still the sole `useDroppable` region — drag/drop hit-testing is unaffected). A new
+    `data-testid="column-scroll-<state>"` identifies the actual scrollable element,
+    for tests that need to scroll it.
+  - 10,000/team was considered and rejected: at that scale ADR-7's fetch-everything
+    list endpoint and client-side filtering become the real bottleneck, which would
+    drag pagination/server-side filtering into a rendering-only task.
+- **Consequences:** DOM node count per column stays bounded (~15-25 rows) regardless of
+  ticket count; `e2e/virtualization.spec.ts` covers the 300-ticket case (bounded DOM,
+  scroll reveals off-screen cards, filtering reflects the full set, drag works on a
+  rendered card); the 1,000-ticket bar is a documented manual check (README) since
+  seeding it in every CI run isn't worth the suite-time. `TicketCard` visuals and
+  `boardFilters.ts` are untouched — this is a render-layer change only.

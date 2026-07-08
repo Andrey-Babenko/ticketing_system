@@ -12,9 +12,12 @@ body {
   color: var(--color-gray-900);
 }
 
-/* Kept as plain CSS: #root lives in index.html. */
+/* Kept as plain CSS: #root lives in index.html. Fixed (not min-) height + hidden
+   overflow so the board's columns can own their own scrolling (S8.3) — Layout's
+   <main> becomes the scroll container for every other page instead. */
 #root {
-  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }

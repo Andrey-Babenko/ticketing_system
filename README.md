@@ -165,6 +165,30 @@ control beyond authorship — §12, no private teams):
 5. `curl -X PATCH localhost:8080/api/tickets/<id>/comments/<commentId>` as a non-author
    (with that user's session cookie) → `403 FORBIDDEN`.
 
+### Large-board smoothness at 1,000 tickets (S8.3, §8/§14 stretch, ADR-16)
+
+The 300-ticket bar is covered by `e2e/virtualization.spec.ts` (bounded DOM, scrolled
+content, filtering, drag). The 1,000-ticket smoothness bar is checked manually — seed via
+the API (curl or a short loop), since 1,000 UI-driven creates would be impractical:
+
+```bash
+# after signup/verify/login with a cookie jar (see auth endpoints above), then:
+for i in $(seq 1 1000); do
+  curl -s -o /dev/null -b cookies.txt -X POST localhost:8080/api/tickets \
+    -H "Content-Type: application/json" \
+    -d "{\"teamId\":<id>,\"type\":\"bug\",\"state\":\"new\",\"title\":\"Perf $i\",\"body\":\"b\"}"
+done
+```
+
+Open the board for that team and confirm: scrolling each column is smooth (DOM stays
+bounded — inspect with devtools, only a couple dozen `[data-testid^="card-"]` nodes exist
+per column regardless of its total count), column/filter counts reflect the full set, and
+drag-and-drop still works for any rendered card.
+
+**Zsh footgun hit while seeding this manually:** zsh arrays are 1-indexed by default —
+`${STATES[$((RANDOM % 5))]}` silently drops the last element and returns empty (→ 400) for
+index 0. Use `${STATES[$(( (RANDOM % 5) + 1 ))]}` in zsh, or `bash -c '...'`.
+
 ## Project layout
 
 ```

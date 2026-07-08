@@ -21,7 +21,7 @@ import { parseCanonicalId } from "../lib/ids";
 import { STATE_ORDER } from "../lib/labels";
 import type { TicketState } from "../lib/labels";
 import Column from "../components/Column";
-import TicketCard, { TicketCardBody } from "../components/TicketCard";
+import { TicketCardBody } from "../components/TicketCard";
 import FilterBar from "../components/FilterBar";
 import Toast from "../components/Toast";
 
@@ -228,19 +228,16 @@ function BoardForTeam({
         </p>
       ) : (
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <div className="flex flex-1 gap-3 overflow-x-auto pb-2">
+          <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto pb-2">
             {STATE_ORDER.map((state) => (
-              <Column key={state} state={state} count={groups[state].length}>
-                {groups[state].map((ticket) => (
-                  <TicketCard
-                    key={ticket.id}
-                    ticket={ticket}
-                    epicName={epicName(ticket.epicId)}
-                    disabled={pendingIds.has(ticket.id)}
-                    justDraggedRef={justDraggedRef}
-                  />
-                ))}
-              </Column>
+              <Column
+                key={state}
+                state={state}
+                tickets={groups[state]}
+                epicName={epicName}
+                disabledIds={pendingIds}
+                justDraggedRef={justDraggedRef}
+              />
             ))}
           </div>
           <DragOverlay>
